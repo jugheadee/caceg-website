@@ -1,0 +1,33 @@
+@import "tailwindcss";
+@theme {
+  --color-primary: #003366; /* bleu foncé CACEG */
+  --color-accent: #ff6600; /* orange */
+}
+/* Reset global léger */
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
+  background-color: #ffffff;
+  color: #1f2937; /* gray-800 */
+}
+
+/* Liens */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Scroll smooth */
+html {
+  scroll-behavior: smooth;
+}
