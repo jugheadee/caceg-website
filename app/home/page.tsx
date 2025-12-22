@@ -1,43 +1,101 @@
+'use client';
+
 import Navbar from '@/components/NavBar';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+
+const slides = [
+  {
+    image: '/hero1.jpeg',
+    title: 'PARTENAIRE PRIVILÉGIÉ DES PME',
+    subtitle: 'Des solutions sur mesure de formation, conseil et expertise de votre projet jusqu\'à la concrétisation',
+  },
+  {
+    image: '/hero2.jpg',
+    title: 'EXPERTISE & ACCOMPAGNEMENT',
+    subtitle: 'Formation professionnelle, consulting et études pour booster votre performance',
+  },
+  {
+    image: '/hero4.jpg',
+    title: 'DÉVELOPPEZ VOS COMPÉTENCES',
+    subtitle: 'Formations adaptées à vos besoins et à votre secteur d\'activité',
+  },
+  {
+    image: '/consulting.jpg',
+    title: 'VERS LA RÉUSSITE DE VOS PROJETS',
+    subtitle: 'Un accompagnement complet pour atteindre vos objectifs',
+  },
+];
 
 export default function Home() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <main className="min-h-screen bg-white">
       <Navbar />
 
-      {/* Spacer pour navbar fixed */}
-      <div className="h-16 lg:h-20"></div>
+     
 
-      {/* HERO SLIDER (on simule avec une grande image + overlay texte) */}
-      <section className="relative h-[70vh] min-h-[500px] flex items-center justify-center bg-gradient-to-r from-blue-900 to-blue-800 text-white">
-        <div className="absolute inset-0 bg-black opacity-40"></div>
-        {/* Remplace par une vraie image du site si tu l'as dans /public */}
-        <Image
-          src="/hero-caceg.jpg" // mets ta vraie photo hero ici (grand format)
-          alt="CACEG Hero"
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            PARTENAIRE PRIVILÉGIÉ <br /> DES PME
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 opacity-90">
-            Des solutions sur mesure de formation, conseil et expertise <br />
-            de votre projet jusqu'à la concrétisation
-          </p>
-          <Link
-            href="/contact"
-            className="inline-block bg-yellow-500 text-blue-900 font-bold px-8 py-4 rounded-lg text-lg hover:bg-yellow-400 transition shadow-lg"
+      {/* HERO SLIDER AUTOMATIQUE */}
+      <section className="relative h-[70vh] min-h-[500px] overflow-hidden">
+        {slides.map((slide, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              index === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
           >
-            EN SAVOIR PLUS
-          </Link>
+            <Image
+              src={slide.image}
+              alt={`CACEG Slide ${index + 1}`}
+              fill
+              className="object-cover"
+              priority={index === 0}
+            />
+            <div className="absolute inset-0 bg-black opacity-50"></div>
+            <div className="relative z-10 flex items-center justify-center h-full text-center text-white px-6">
+              <div className="max-w-4xl">
+                <h1 className="text-4xl md:text-6xl font-bold mb-6">
+                  {slide.title}
+                </h1>
+                <p className="text-xl md:text-2xl mb-8 opacity-90">
+                  {slide.subtitle}
+                </p>
+                <Link
+                  href="/contact"
+                  className="inline-block bg-yellow-500 text-blue-900 font-bold px-8 py-4 rounded-lg text-lg hover:bg-yellow-400 transition shadow-lg"
+                >
+                  EN SAVOIR PLUS
+                </Link>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Indicateurs en bas */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full transition ${
+                index === currentSlide ? 'bg-yellow-500' : 'bg-white opacity-60'
+              } hover:bg-yellow-400`}
+              aria-label={`Aller au slide ${index + 1}`}
+            />
+          ))}
         </div>
       </section>
 
+      {/* Le reste des sections (copie-colle celles du code précédent) */}
       {/* Section "Une formation réussie..." */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
@@ -60,7 +118,7 @@ export default function Home() {
           </div>
           <div className="flex justify-center">
             <Image
-              src="/formation-image.jpg" // remplace par une belle image formation
+              src="/formation-image.jpg"
               alt="Formation CACEG"
               width={600}
               height={400}
@@ -70,13 +128,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CACEG Formations + Consulting (2 sections côte à côte) */}
+      {/* CACEG Formations + Consulting */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16">
-          {/* Formations */}
           <div className="text-center md:text-left">
             <Image
-              src="/formations-caceg.jpg" // image formation en groupe
+              src="/formation-image.jpg"
               alt="CACEG Formations"
               width={600}
               height={400}
@@ -97,10 +154,9 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Consulting */}
           <div className="text-center md:text-left">
             <Image
-              src="/consulting-caceg.jpg" // image consulting
+              src="/consulting-caceg.jpg"
               alt="CACEG Consulting"
               width={600}
               height={400}
@@ -120,7 +176,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* Témoignages clients */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
@@ -202,6 +257,9 @@ export default function Home() {
           © {new Date().getFullYear()} CACEG. Tous droits réservés. Designed with ❤️ in Algeria
         </div>
       </footer>
+
+    
+
     </main>
   );
 }
