@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
-export default function Navar() {
+export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -25,24 +25,27 @@ export default function Navar() {
         {/* Desktop Menu */}
         <ul className="hidden lg:flex items-center text-sm font-semibold uppercase text-gray-700 tracking-wider">
           <li className="px-4 border-l border-gray-300 first:border-l-0">
-            <Link href="/" className="hover:text-orange-600 transition">
+            <Link href="/home" className="hover:text-amber-600 transition">
               Accueil
             </Link>
           </li>
 
           {/* A propos Dropdown */}
           <li className="group relative px-4 border-l border-gray-300">
-            <button className="flex items-center hover:text-orange-600 transition">
+            <button className="flex items-center gap-1 hover:text-amber-600 transition">
               A propos ▼
             </button>
-            <div className="absolute top-full left-0 mt-2 bg-white shadow-lg border border-gray-200 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all w-56 py-2">
+            <div className="absolute top-full left-0 mt-2 bg-white shadow-lg border border-gray-200 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all w-56 py-2 z-50">
               <Link
                 href="/presentation"
-                className="block px-6 py-2 hover:bg-gray-50"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
               >
                 Présentation
               </Link>
-              <Link href="/equipe" className="block px-6 py-2 hover:bg-gray-50">
+              <Link
+                href="/equipe"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
+              >
                 Équipe
               </Link>
             </div>
@@ -51,7 +54,7 @@ export default function Navar() {
           <li className="px-4 border-l border-gray-300">
             <Link
               href="/actualites"
-              className="hover:text-orange-600 transition"
+              className="hover:text-amber-600 transition"
             >
               Actualités
             </Link>
@@ -59,37 +62,60 @@ export default function Navar() {
 
           {/* Formations Dropdown */}
           <li className="group relative px-4 border-l border-gray-300">
-            <button className="flex items-center hover:text-orange-600 transition">
+            <button className="flex items-center gap-1 hover:text-amber-600 transition">
               Nos formations ▼
             </button>
-            <div className="absolute top-full left-0 mt-2 bg-white shadow-lg border border-gray-200 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all w-56 py-2">
+            <div className="absolute top-full left-0 mt-2 bg-white shadow-lg border border-gray-200 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all w-64 py-2 z-50">
               <Link
-                href="/formations/qhse"
-                className="block px-6 py-2 hover:bg-gray-50"
+                href="/formations/management"
+                className="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-100 hover:text-amber-600 transition"
               >
-                QHSE
+                MANAGEMENT DE L'ENTREPRISE
               </Link>
               <Link
-                href="/formations/grh"
-                className="block px-6 py-2 hover:bg-gray-50"
+                href="/formations/gestion-recources-humaines"
+                className="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-100 hover:text-amber-600 transition"
               >
-                GRH
+                GESTION DES RESSOURCES HUMAINES
               </Link>
-              {/* Ajoute d'autres si besoin */}
+              <Link
+                href="/formations/comptabilite-finance-fiscalite"
+                className="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-100 hover:text-amber-600 transition"
+              >
+                COMPTABILITÉ, FINANCE ET FISCALITÉ
+              </Link>
+              <Link
+                href="/formations/gestion-commerciale-marketing"
+                className="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-100 hover:text-amber-600 transition"
+              >
+                GESTION COMMERCIALE ET MARKETING
+              </Link>
+              <Link
+                href="/formations/informatique"
+                className="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-100 !hover:text-amber-600 transition"
+              >
+                INFORMATIQUE
+              </Link>
+              <Link
+                href="/formations"
+                className="block px-6 py-3 text-amber-600 font-bold hover:bg-gray-100 hover:text-amber-500 transition"
+              >
+                VOIR TOUTES LES FORMATIONS...
+              </Link>
             </div>
           </li>
 
           <li className="px-4 border-l border-gray-300">
             <Link
-              href="/etudes"
-              className="text-orange-600 hover:text-orange-700 transition font-bold"
+              href="/consulting"
+              className="text-orange-600 !hover:text-amber-600 font-bold transition"
             >
-              Études et accompagnement
+              Consulting et accompagnement
             </Link>
           </li>
 
           <li className="px-4 border-l border-gray-300">
-            <Link href="/contact" className="hover:text-orange-600 transition">
+            <Link href="/contact" className="hover:text-amber-600 transition">
               Contact
             </Link>
           </li>
@@ -97,7 +123,7 @@ export default function Navar() {
           <li className="px-4 border-l border-gray-300">
             <Link
               href="/stagiaires"
-              className="hover:text-orange-600 transition"
+              className="hover:text-amber-600 transition"
             >
               Stagiaires
             </Link>
@@ -105,7 +131,7 @@ export default function Navar() {
 
           {/* Search Icon */}
           <li className="pl-4">
-            <button className="text-gray-700 hover:text-orange-600 text-xl">
+            <button className="text-gray-700 hover:text-amber-600 text-xl transition">
               🔍
             </button>
           </li>
@@ -125,51 +151,81 @@ export default function Navar() {
         <div className="lg:hidden bg-white border-t border-gray-200">
           <ul className="flex flex-col text-sm font-semibold uppercase text-gray-700 py-4">
             <li>
-              <Link href="/" className="block px-6 py-3 hover:bg-gray-50">
+              <Link
+                href="/"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
+              >
                 Accueil
               </Link>
             </li>
             <li>
               <Link
                 href="/presentation"
-                className="block px-6 py-3 hover:bg-gray-50"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
               >
                 Présentation
               </Link>
             </li>
             <li>
-              <Link href="/equipe" className="block px-6 py-3 hover:bg-gray-50">
+              <Link
+                href="/equipe"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
+              >
                 Équipe
               </Link>
             </li>
             <li>
               <Link
                 href="/actualites"
-                className="block px-6 py-3 hover:bg-gray-50"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
               >
                 Actualités
               </Link>
             </li>
             <li>
               <Link
-                href="/formations/qhse"
-                className="block px-6 py-3 hover:bg-gray-50"
+                href="/formations/management"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
               >
-                Formations QHSE
+                Management de l'entreprise
               </Link>
             </li>
             <li>
               <Link
-                href="/formations/grh"
-                className="block px-6 py-3 hover:bg-gray-50"
+                href="/formations/gestion-recources-humaines"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
               >
-                Formations GRH
+                Gestion des ressources humaines
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/formations/comptabilite-finance-fiscalite"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
+              >
+                Comptabilité, finance et fiscalité
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/formations/gestion-commerciale-marketing"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
+              >
+                Gestion commerciale et marketing
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/formations/informatique"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
+              >
+                Informatique
               </Link>
             </li>
             <li>
               <Link
                 href="/etudes"
-                className="block px-6 py-3 hover:bg-gray-50 text-orange-600 font-bold"
+                className="block px-6 py-3 hover:bg-gray-100 text-orange-600 font-bold hover:text-amber-600 transition"
               >
                 Études et accompagnement
               </Link>
@@ -177,7 +233,7 @@ export default function Navar() {
             <li>
               <Link
                 href="/contact"
-                className="block px-6 py-3 hover:bg-gray-50"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
               >
                 Contact
               </Link>
@@ -185,7 +241,7 @@ export default function Navar() {
             <li>
               <Link
                 href="/stagiaires"
-                className="block px-6 py-3 hover:bg-gray-50"
+                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
               >
                 Stagiaires
               </Link>
