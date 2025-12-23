@@ -1,35 +1,73 @@
 "use client";
 
 import Image from "next/image";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
 
 const sponsors = [
-  { src: "/logos/sonelgaz.png", alt: "Sonelgaz" },
-  { src: "/logos/sonatrach.png", alt: "Sonatrach" },
-  { src: "/logos/cevital3.png", alt: "Cevital" },
-  { src: "/logos/az-hotels.png", alt: "AZ Hotels" },
+  {
+    src: "/logos/sonelgaz.png",
+    alt: "Sonelgaz",
+    url: "https://www.sonelgaz.dz/",
+  },
+  {
+    src: "/logos/sonatrach.png",
+    alt: "Sonatrach",
+    url: "https://www.sonatrach.com/",
+  },
+  {
+    src: "/logos/cevital3.png",
+    alt: "Cevital",
+    url: "https://www.cevital.com/",
+  },
+  {
+    src: "/logos/az-hotels.png",
+    alt: "AZ Hotels",
+    url: "https://www.azhotels.dz/",
+  },
 ];
 
 export default function SponsorsCarousel() {
+  const duplicatedSponsors = [...sponsors, ...sponsors, ...sponsors]; // 3 copies for smooth infinite loop
+
+  const [emblaRef] = useEmblaCarousel(
+    {
+      loop: true,
+      dragFree: false,
+      slidesToScroll: 1,
+      align: "start",
+      containScroll: "trimSnaps",
+      skipSnaps: false,
+    },
+    [Autoplay({ delay: 3000, stopOnInteraction: false })]
+  );
+
   return (
-    <div className="relative w-full overflow-hidden">
-      {/* Marquee */}
-      <div className="flex w-max animate-marquee">
-        {[...sponsors, ...sponsors].map((logo, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-center w-[180px] h-[180px] mx-12"
-          >
-            <div className="relative w-full h-full">
-              <Image
-                src={logo.src}
-                alt={logo.alt}
-                fill
-                className="object-contain"
-                sizes="(max-width: 768px) 200px, 260px"
-              />
+    <div className="relative w-full overflow-hidden py-8 group">
+      <div className="embla" ref={emblaRef}>
+        <div className="embla__container flex">
+          {duplicatedSponsors.map((logo, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-center w-[200px] h-[200px] mx-16 embla__slide"
+            >
+              <a
+                href={logo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative w-full h-full block cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                <Image
+                  src={logo.src}
+                  alt={logo.alt}
+                  fill
+                  className="object-contain select-none"
+                  sizes="(max-width: 768px) 150px, 200px"
+                />
+              </a>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

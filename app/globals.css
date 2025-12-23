@@ -5,17 +5,11 @@
   --color-accent: #ff6600; /* orange */
 }
 
-.animate-marquee {
-  animation: marquee 40s linear infinite; /* Slow wheel speed */
+.embla {
+  overflow: hidden;
 }
-
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+.embla__slide {
+  flex: 0 0 auto;
 }
 
 /* Reset global léger */
