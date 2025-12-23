@@ -1,15 +1,24 @@
 @import "tailwindcss";
+
 @theme {
   --color-primary: #003366; /* bleu foncé CACEG */
   --color-accent: #ff6600; /* orange */
 }
+
+.embla {
+  overflow: hidden;
+}
+.embla__slide {
+  flex: 0 0 auto;
+}
+
 /* Reset global léger */
 html,
 body {
   padding: 0;
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Ubuntu, "Helvetica Neue", sans-serif;
   background-color: #ffffff;
   color: #1f2937; /* gray-800 */
 }
