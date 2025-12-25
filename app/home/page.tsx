@@ -1,23 +1,21 @@
-"use client";
+'use client';
 
-import Navbar from "@/components/NavBar";
-import Image from "next/image";
-import Link from "next/link";
-import { useState, useEffect } from "react";
-import SponsorsCarousel from "@/components/SponsorsCarousel";
+import Navbar from '@/components/NavBar';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import SponsorsCarousel from '@/components/SponsorsCarousel';
 
 const slides = [
   {
     image: "/hero1.jpeg",
     title: "PARTENAIRE PRIVILÉGIÉ DES PME",
-    subtitle:
-      "Des solutions sur mesure de formation, conseil et expertise de votre projet jusqu'à la concrétisation",
+    subtitle: "Des solutions sur mesure de formation, conseil et expertise de votre projet jusqu'à la concrétisation",
   },
   {
     image: "/hero2.jpg",
     title: "EXPERTISE & ACCOMPAGNEMENT",
-    subtitle:
-      "Formation professionnelle, consulting et études pour booster votre performance",
+    subtitle: "Formation professionnelle, consulting et études pour booster votre performance",
   },
   {
     image: "/hero4.jpg",
@@ -41,63 +39,83 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
+
   return (
     <main className="min-h-screen bg-white">
       <Navbar />
 
-      {/* HERO SLIDER AUTOMATIQUE */}
-      <section className="relative h-[70vh] min-h-[500px] overflow-hidden">
-        {slides.map((slide, index) => (
-          <div
-            key={index}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === currentSlide ? "opacity-100" : "opacity-0"
-            }`}
+      {/* HERO SLIDER CLASSE ET MODERNE */}
+     <section className="relative h-[70vh] min-h-[500px] overflow-hidden group"> {/* group pour hover global */}
+  {slides.map((slide, index) => (
+    <div
+      key={index}
+      className={`absolute inset-0 transition-all duration-1500 ease-in-out ${
+        index === currentSlide ? "opacity-100 scale-100" : "opacity-0 scale-105"
+      }`}
+    >
+      <Image
+        src={slide.image}
+        alt={`CACEG Hero ${index + 1}`}
+        fill
+        className="object-cover"
+        priority={index === 0}
+      />
+      {/* Overlay gradient élégant */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+      <div className="relative h-full flex items-center justify-center text-center text-white px-6">
+        <div className={`max-w-5xl transition-all duration-1000 delay-300 ${
+          index === currentSlide ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}>
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 drop-shadow-2xl">
+            {slide.title}
+          </h1>
+          <p className="text-xl md:text-3xl mb-10 drop-shadow-lg">
+            {slide.subtitle}
+          </p>
+          <Link
+            href="/contact"
+            className="inline-block bg-yellow-500 text-blue-900 font-bold px-10 py-5 rounded-full text-xl hover:bg-yellow-400 hover:shadow-2xl transition-all duration-500"
           >
-            <Image
-              src={slide.image}
-              alt={`CACEG Slide ${index + 1}`}
-              fill
-              className="object-cover"
-              priority={index === 0}
-            />
-            <div className="absolute inset-0 bg-black opacity-50"></div>
-            <div className="relative z-10 flex items-center justify-center h-full text-center text-white px-6">
-              <div className="max-w-4xl">
-                <h1 className="text-4xl md:text-6xl font-bold mb-6">
-                  {slide.title}
-                </h1>
-                <p className="text-xl md:text-2xl mb-8 opacity-90">
-                  {slide.subtitle}
-                </p>
-                <Link
-                  href="/contact"
-                  className="inline-block bg-yellow-500 text-blue-900 font-bold px-8 py-4 rounded-lg text-lg hover:bg-yellow-400 transition shadow-lg"
-                >
-                  EN SAVOIR PLUS
-                </Link>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Indicateurs en bas */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`w-3 h-3 rounded-full transition ${
-                index === currentSlide ? "bg-yellow-500" : "bg-white opacity-60"
-              } hover:bg-yellow-400`}
-              aria-label={`Aller au slide ${index + 1}`}
-            />
-          ))}
+            EN SAVOIR PLUS
+          </Link>
         </div>
-      </section>
+      </div>
+    </div>
+  ))}
 
-      {/* Le reste des sections (copie-colle celles du code précédent) */}
-      {/* Section "Une formation réussie..." */}
+  {/* Flèches – apparaissent en fade + scale au hover */}
+  <button
+    onClick={prevSlide}
+    className="absolute left-8 top-1/2 -translate-y-1/2 z-20 text-white text-5xl opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 transition-all duration-700"
+    aria-label="Slide précédent"
+  >
+    ‹
+  </button>
+  <button
+    onClick={nextSlide}
+    className="absolute right-8 top-1/2 -translate-y-1/2 z-20 text-white text-5xl opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 transition-all duration-700"
+    aria-label="Slide suivant"
+  >
+    ›
+  </button>
+
+  {/* Points indicateurs – apparaissent en fade au hover */}
+  <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+    {slides.map((_, index) => (
+      <button
+        key={index}
+        onClick={() => setCurrentSlide(index)}
+        className={`w-3 h-3 rounded-full transition-all duration-500 ${
+          index === currentSlide ? "bg-yellow-500 w-12" : "bg-white/70"
+        } hover:bg-yellow-400`}
+      />
+    ))}
+  </div>
+</section>
+
+      {/* Une formation réussie... */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
           <div>
@@ -105,15 +123,10 @@ export default function Home() {
               Une formation réussie, un accès facile à l'emploi
             </h2>
             <p className="text-lg text-gray-700 mb-8">
-              CACEG a développé une large gamme de formations pour partager et
-              transmettre le savoir et les bonnes pratiques du management aux
-              salariés de chaque entreprise.
+              CACEG a développé une large gamme de formations pour partager et transmettre le savoir et les bonnes pratiques du management aux salariés de chaque entreprise.
             </p>
             <p className="text-lg text-gray-700 mb-8">
-              Toutes nos formations sont adaptables à vos besoins et contexte
-              (durée, programme, niveau de difficulté, nombre de
-              participants...). Nous pouvons également concevoir des formations
-              totalement sur mesure en tenant votre cahier des charges.
+              Toutes nos formations sont adaptables à vos besoins et contexte (durée, programme, niveau de difficulté, nombre de participants...). Nous pouvons également concevoir des formations totalement sur mesure en tenant votre cahier des charges.
             </p>
             <Link
               href="/formations"
@@ -145,18 +158,9 @@ export default function Home() {
               height={400}
               className="rounded-xl shadow-xl mb-8 mx-auto md:mx-0"
             />
-            <h2 className="text-3xl font-bold text-blue-900 mb-6">
-              CACEG Formations
-            </h2>
+            <h2 className="text-3xl font-bold text-blue-900 mb-6">CACEG Formations</h2>
             <p className="text-gray-700 mb-8 text-lg">
-              Nous proposons des formations inter-entreprises et des formations
-              intra-entreprises. Caceg Formations identifie avec votre
-              entreprise vos besoins en formation. Nous établissons ensemble un
-              plan de formation en fonction de votre budget et de votre
-              calendrier. Notre expérience et notre réseau de formateurs et
-              d'organismes de formation nous permettent de vous proposer des
-              formations, tant en termes de contenu que de coûts et
-              d'organisation.
+              Nous proposons des formations inter-entreprises et des formations intra-entreprises. Caceg Formations identifie avec votre entreprise vos besoins en formation. Nous établissons ensemble un plan de formation en fonction de votre budget et de votre calendrier.
             </p>
             <Link
               href="/formations"
@@ -174,16 +178,9 @@ export default function Home() {
               height={400}
               className="rounded-xl shadow-xl mb-8 mx-auto md:mx-0"
             />
-            <h2 className="text-3xl font-bold text-blue-900 mb-6">
-              CACEG Consulting
-            </h2>
+            <h2 className="text-3xl font-bold text-blue-900 mb-6">CACEG Consulting</h2>
             <p className="text-gray-700 mb-8 text-lg">
-              Nous avons pour mission d'accompagner les entreprises dans leurs
-              projets d'évolution et de développement afin de les propulser vers
-              la réussite de leurs objectifs de performance. La
-              pluridisciplinarité de notre équipe d'experts permet de vous
-              accompagner dans votre projet de certification ISO, élaboration de
-              plan stratégique, audit, certification, etc.
+              Nous avons pour mission d'accompagner les entreprises dans leurs projets d'évolution et de développement afin de les propulser vers la réussite de leurs objectifs de performance.
             </p>
             <Link
               href="/etudes"
@@ -194,7 +191,8 @@ export default function Home() {
           </div>
         </div>
       </section>
-      {/* Témoignages clients */}
+
+      {/* Témoignages */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-center text-blue-900 mb-12">
@@ -203,20 +201,14 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-12">
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <p className="text-gray-700 italic mb-6">
-                "J'ai vraiment apprécié les cours de CACEG et j'espère pouvoir
-                suivre d'autres formations avec eux. Les explications sont
-                claires ainsi que les exemples sont bien présentés et faciles à
-                suivre."
+                "J'ai vraiment apprécié les cours de CACEG et j'espère pouvoir suivre d'autres formations avec eux. Les explications sont claires ainsi que les exemples sont bien présentés et faciles à suivre."
               </p>
               <p className="font-semibold text-blue-900">Mohamed</p>
               <p className="text-sm text-gray-600">Développeur Web</p>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <p className="text-gray-700 italic mb-6">
-                "Les cours ici ont dépassé mes attentes à bien des égards.
-                L'approche pédagogique est claire et structurée. Dans un
-                environnement très calme, j'ai appris les principes clés du
-                design que je peux mettre en œuvre immédiatement."
+                "Les cours ici ont dépassé mes attentes à bien des égards. L'approche pédagogique est claire et structurée. Dans un environnement très calme, j'ai appris les principes clés du design que je peux mettre en œuvre immédiatement."
               </p>
               <p className="font-semibold text-blue-900">Rafik Ziani</p>
               <p className="text-sm text-gray-600">Infographie</p>
@@ -225,15 +217,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Newsletter*/}
+      {/* Newsletter */}
       <section className="py-24 bg-blue-950 text-white">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-8">
             Abonnez-vous à notre newsletter
           </h2>
           <p className="text-xl text-blue-200 mb-12 max-w-2xl mx-auto">
-            Recevez en exclusivité nos actualités, nouvelles formations et
-            conseils en management & consulting.
+            Recevez en exclusivité nos actualités, nouvelles formations et conseils en management & consulting.
           </p>
 
           <form className="flex flex-col md:flex-row gap-6 max-w-2xl mx-auto items-center justify-center">
@@ -253,106 +244,48 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Sponsors Section - Now using the client component */}
+      {/* Sponsors */}
       <section className="py-16 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-center text-blue-900 mb-12">
             Nos Partenaires et Sponsors
           </h2>
-          <SponsorsCarousel /> {/* This is client-side, handles the carousel */}
+          <SponsorsCarousel />
         </div>
       </section>
 
       {/* Footer */}
       <footer className="bg-blue-950 text-gray-300 py-12">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8">
-          {/* Colonne 1 : CACEG */}
           <div>
             <h3 className="text-white font-bold text-lg mb-4">CACEG</h3>
             <p className="text-sm leading-relaxed">
-              CACEG Consulting, spécialisé en Formation, consulting et étude
-              ainsi en management et ressources humaines (RH). Notre cabinet de
-              formation agréé en Algérie réalise des formations
-              professionnelles.
+              CACEG Consulting, spécialisé en Formation, consulting et étude ainsi en management et ressources humaines (RH). Notre cabinet de formation agréé en Algérie réalise des formations professionnelles.
             </p>
           </div>
 
-          {/* Colonne 2 : Liens Utiles */}
           <div>
             <h3 className="text-white font-bold text-lg mb-4">Liens Utiles</h3>
             <ul className="space-y-3 text-sm">
-              <li>
-                <Link
-                  href="/formations"
-                  className="hover:text-white transition flex items-center gap-2"
-                >
-                  <span className="text-yellow-500">›</span> Formations
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/actualites"
-                  className="hover:text-white transition flex items-center gap-2"
-                >
-                  <span className="text-yellow-500">›</span> Actualités
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/presentation"
-                  className="hover:text-white transition flex items-center gap-2"
-                >
-                  <span className="text-yellow-500">›</span> À propos
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/faq"
-                  className="hover:text-white transition flex items-center gap-2"
-                >
-                  <span className="text-yellow-500">›</span> FAQ
-                </Link>
-              </li>
+              <li><Link href="/formations" className="hover:text-white transition flex items-center gap-2"><span className="text-yellow-500">›</span> Formations</Link></li>
+              <li><Link href="/actualites" className="hover:text-white transition flex items-center gap-2"><span className="text-yellow-500">›</span> Actualités</Link></li>
+              <li><Link href="/presentation" className="hover:text-white transition flex items-center gap-2"><span className="text-yellow-500">›</span> À propos</Link></li>
+              <li><Link href="/faq" className="hover:text-white transition flex items-center gap-2"><span className="text-yellow-500">›</span> FAQ</Link></li>
             </ul>
           </div>
 
-          {/* Colonne 3 : Coordonnées */}
           <div>
             <h3 className="text-white font-bold text-lg mb-4">Coordonnées</h3>
             <ul className="space-y-4 text-sm">
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500">📍</span>
-                <span>
-                  01, Place Ayachi Abderrahmane, BPS18 RP,Mostaganem, Algérie
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="text-yellow-500">☎</span>
-                <span>+213 (0)23 58 86 76</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="text-yellow-500">📱</span>
-                <span>+213 (0)550 177 84</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="text-yellow-500">✉</span>
-                <a
-                  href="mailto:contact@caceg-dz.com"
-                  className="hover:text-white transition"
-                >
-                  contact@caceg-dz.com
-                </a>
-              </li>
+              <li className="flex items-start gap-3"><span className="text-yellow-500">📍</span><span>01, Place Ayachi Abderrahmane, BPS18 RP,Mostaganem, Algérie</span></li>
+              <li className="flex items-center gap-3"><span className="text-yellow-500">☎</span><span>+213 (0)23 58 86 76</span></li>
+              <li className="flex items-center gap-3"><span className="text-yellow-500">📱</span><span>+213 (0)550 177 84</span></li>
+              <li className="flex items-center gap-3"><span className="text-yellow-500">✉</span><a href="mailto:contact@caceg-dz.com" className="hover:text-white transition">contact@caceg-dz.com</a></li>
             </ul>
           </div>
 
-          {/* Colonne 4 : Logo FEDE à droite */}
           <div className="flex flex-col items-end justify-start pr-8">
-            {" "}
-            {/* padding droite pour centrer visuellement */}
-            <p className="text-sm text-gray-400 mb-4 w-full text-right">
-              CACEG est agréé par :
-            </p>
+            <p className="text-sm text-gray-400 mb-4 w-full text-right">CACEG est agréé par :</p>
             <Image
               src="/logos/fede.png"
               alt="FEDE - Fédération Européenne Des Écoles"
@@ -363,10 +296,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Ligne du bas */}
         <div className="mt-12 pt-8 border-t border-blue-800 text-center text-sm text-gray-400">
-          © {new Date().getFullYear()} CACEG. Tous droits réservés. Designed by
-          sefrone
+          © {new Date().getFullYear()} CACEG. Tous droits réservés. Designed by sefrone
         </div>
       </footer>
     </main>

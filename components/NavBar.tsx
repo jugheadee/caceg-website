@@ -30,26 +30,12 @@ export default function Navbar() {
             </Link>
           </li>
 
-          {/* A propos Dropdown */}
-          <li className="group relative px-4 border-l border-gray-300">
-            <button className="flex items-center gap-1 hover:text-amber-600 transition">
-              A propos ▼
-            </button>
-            <div className="absolute top-full left-0 mt-2 bg-white shadow-lg border border-gray-200 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all w-56 py-2 z-50">
-              <Link
-                href="/presentation"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
-              >
-                Présentation
-              </Link>
-              <Link
-                href="/equipe"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
-              >
-                Équipe
-              </Link>
-            </div>
-          </li>
+          {/* A propos  */}
+         <li className="px-4 border-l border-gray-300">
+  <Link href="/a-propos" className="hover:text-amber-600 transition">
+    A propos
+  </Link>
+</li>
 
           <li className="px-4 border-l border-gray-300">
             <Link
@@ -120,21 +106,23 @@ export default function Navbar() {
             </Link>
           </li>
 
-          <li className="px-4 border-l border-gray-300">
-            <Link
-              href="/stagiaires"
-              className="hover:text-amber-600 transition"
-            >
-              Stagiaires
-            </Link>
-          </li>
+       
 
           {/* Search Icon */}
-          <li className="pl-4">
-            <button className="text-gray-700 hover:text-amber-600 text-xl transition">
-              🔍
-            </button>
-          </li>
+<li className="pl-4">
+  <button 
+    className="text-gray-700 hover:text-amber-600 transition flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100"
+    aria-label="Rechercher"
+  >
+    <Image
+      src="/search.png" 
+      alt="Rechercher"
+      width={24}
+      height={24}
+      className="object-contain"
+    />
+  </button>
+</li>
         </ul>
 
         {/* Mobile Burger */}
@@ -238,14 +226,7 @@ export default function Navbar() {
                 Contact
               </Link>
             </li>
-            <li>
-              <Link
-                href="/stagiaires"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
-              >
-                Stagiaires
-              </Link>
-            </li>
+           
           </ul>
         </div>
       )}
