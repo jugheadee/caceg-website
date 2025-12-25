@@ -132,7 +132,7 @@ export default function ConsultingPage() {
             {/* Infographie circulaire */}
             <div className="flex justify-center">
               <Image
-                src="/competence.jpg"
+                src="/banner2.jpg" 
                 alt="Domaines de compétence CACEG"
                 width={500}
                 height={500}
