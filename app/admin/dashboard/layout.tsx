@@ -1,21 +1,16 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import {
   Menu,
   UserCircle,
   LogOut,
   Settings,
-  Download,
-  Printer,
-  ChevronDown,
-  ChevronUp,
   LayoutDashboard,
-  Palette,
   BookOpen,
   Users,
   Mail,
@@ -24,8 +19,13 @@ import {
 
 const ONE_HOUR = 60 * 60 * 1000;
 
-export default function AdminProtectedLayout({ children }: { children: React.ReactNode }) {
+export default function AdminProtectedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
+  const pathname = usePathname();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -47,17 +47,19 @@ export default function AdminProtectedLayout({ children }: { children: React.Rea
 
     return () => unsubscribe();
   }, [router]);
-  const [currentPath, setCurrentPath] = useState<string>("");
-
-useEffect(() => {
-  setCurrentPath(window.location.pathname);
-}, []);
 
   const handleLogout = async () => {
     localStorage.removeItem("adminLoginTime");
     await signOut(auth);
     router.push("/admin/login");
   };
+
+  const navigateTo = (path: string) => {
+    router.push(path);
+  };
+
+  // Taille des icônes : plus grande quand sidebar fermée
+  const iconSize = sidebarExpanded ? 22 : 28;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -66,7 +68,7 @@ useEffect(() => {
         <div className="flex items-center gap-5">
           <button
             onClick={() => setSidebarExpanded(!sidebarExpanded)}
-            className="text-gray-700 hover:text-blue-900 transition"
+            className="text-gray-700 hover:text-blue-900 transition cursor-pointer"
           >
             <Menu size={28} />
           </button>
@@ -92,14 +94,17 @@ useEffect(() => {
 
           {profileOpen && (
             <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 py-3 z-50">
-              <a href="#" className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition">
+              <a
+                href="#"
+                className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition cursor-pointer"
+              >
                 <Settings size={18} />
                 Changer mot de passe
               </a>
               <hr className="my-2 border-gray-100" />
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 text-red-600 transition text-left"
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 text-red-600 transition text-left cursor-pointer"
               >
                 <LogOut size={18} />
                 Déconnexion
@@ -109,82 +114,130 @@ useEffect(() => {
         </div>
       </header>
 
-      {/* Sidebar bleu foncé – couleurs corrigées */}
-      <aside className={`fixed left-0 top-16 bottom-0 bg-blue-900 text-white transition-all duration-300 z-40 flex flex-col ${sidebarExpanded ? "w-64" : "w-20"}`}>
-       <nav className="flex-1 py-6 px-4 space-y-6">
-  {/* Principal */}
-  <div>
-    <p className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${!sidebarExpanded ? "text-center" : ""}`}>
-      {sidebarExpanded ? "Principal" : "..."}
-    </p>
-    <a 
-      href="/admin/dashboard/acceuil" 
-      className={`flex items-center gap-4 py-3 px-4 rounded-xl font-medium transition ${
-        currentPath === "/admin/dashboard/acceuil" 
-          ? "bg-blue-800 text-blue-900" 
-          : "text-gray-200 hover:bg-blue-700"
-      } ${!sidebarExpanded && "justify-center"}`}
-    >
-      <LayoutDashboard size={22} />
-      {sidebarExpanded && <span>Dashboard</span>}
-    </a>
-  </div>
+      {/* Sidebar */}
+      <aside
+        className={`fixed left-0 top-16 bottom-0 bg-blue-900 text-white transition-all duration-300 z-40 flex flex-col ${
+          sidebarExpanded ? "w-68" : "w-20"
+        }`}
+      >
+        <nav className="flex-1 py-6 px-4 space-y-6 overflow-y-auto">
+          {/* Principal */}
+          <div>
+            <p
+              className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${
+                !sidebarExpanded ? "text-center" : ""
+              }`}
+            >
+              {sidebarExpanded ? "Principal" : "..."}
+            </p>
+            <button
+              onClick={() => navigateTo("/admin/dashboard/acceuil")}
+              className={`w-full flex items-center gap-4 py-3 px-4 rounded-xl font-medium transition cursor-pointer ${
+                pathname === "/admin/dashboard/acceuil"
+                  ? "bg-blue-800 text-white font-semibold"
+                  : "text-gray-200 hover:bg-blue-700"
+              } ${!sidebarExpanded && "justify-center"}`}
+            >
+              <LayoutDashboard size={iconSize} />
+              {sidebarExpanded && <span>Dashboard</span>}
+            </button>
+          </div>
 
-  {/* Forms and Datas */}
-  <div>
-    <p className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${!sidebarExpanded ? "text-center" : ""}`}>
-      {sidebarExpanded ? "Forms and Datas" : "..."}
-    </p>
-    <a 
-      href="/admin/dashboard/gestion-formations" 
-      className={`flex items-center gap-4 py-3 px-4 rounded-lg transition ${
-        currentPath === "/admin/dashboard/gestion-formations" 
-          ? "bg-blue-800 text-blue-900" 
-          : "text-gray-200 hover:bg-blue-700"
-      } ${!sidebarExpanded && "justify-center"}`}
-    >
-      <BookOpen size={22} />
-      {sidebarExpanded && <span>Gestion Formations</span>}
-    </a>
+          {/* Forms and Datas */}
+          <div>
+            <p
+              className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${
+                !sidebarExpanded ? "text-center" : ""
+              }`}
+            >
+              {sidebarExpanded ? "Forms and Datas" : "..."}
+            </p>
 
-    {/* Les autres liens (Étudiants, Demandes, etc.) – même principe si tu veux */}
-    <a href="#" className={`flex items-center gap-4 py-3 px-4 rounded-lg transition text-gray-200 hover:bg-blue-800 ${!sidebarExpanded && "justify-center"}`}>
-      <Users size={22} />
-      {sidebarExpanded && <span>Gestion Étudiants</span>}
-    </a>
-    <a href="#" className={`flex items-center gap-4 py-3 px-4 rounded-lg transition text-gray-200 hover:bg-blue-800 ${!sidebarExpanded && "justify-center"}`}>
-      <Mail size={22} />
-      {sidebarExpanded && <span>Demandes de Formulaires</span>}
-    </a>
-  </div>
+            <button
+              onClick={() => navigateTo("/admin/dashboard/gestion-formations")}
+              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
+                pathname === "/admin/dashboard/gestion-formations"
+                  ? "bg-blue-800 text-white font-semibold"
+                  : "text-gray-200 hover:bg-blue-700"
+              } ${!sidebarExpanded && "justify-center"}`}
+            >
+              <BookOpen size={iconSize} />
+              {sidebarExpanded && <span>Gestion Formations</span>}
+            </button>
 
-  {/* Help */}
-  <div>
-    <p className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${!sidebarExpanded ? "text-center" : ""}`}>
-      {sidebarExpanded ? "Help" : "..."}
-    </p>
-    <a href="#" className={`flex items-center gap-4 py-3 px-4 rounded-lg transition text-gray-200 hover:bg-blue-800 ${!sidebarExpanded && "justify-center"}`}>
-      <HelpCircle size={22} />
-      {sidebarExpanded && <span>Documentation</span>}
-    </a>
-  </div>
-</nav>
+            <button
+              onClick={() => navigateTo("/admin/dashboard/gestion-etu")}
+              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
+                pathname === "/admin/dashboard/gestion-etu"
+                  ? "bg-blue-800 text-white font-semibold"
+                  : "text-gray-200 hover:bg-blue-700"
+              } ${!sidebarExpanded && "justify-center"}`}
+            >
+              <Users size={iconSize} />
+              {sidebarExpanded && <span>Gestion Étudiants</span>}
+            </button>
 
-        <div className="px-4 pb-6">
+            <button
+              onClick={() => navigateTo("/admin/dashboard/demandes")}
+              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
+                pathname === "/admin/dashboard/demandes"
+                  ? "bg-blue-800 text-white font-semibold"
+                  : "text-gray-200 hover:bg-blue-700"
+              } ${!sidebarExpanded && "justify-center"}`}
+            >
+              <Mail size={iconSize} />
+              {sidebarExpanded && <span>Demandes Formulaires</span>}
+            </button>
+          </div>
+        </nav>
+
+        {/* Help + Déconnexion – en bas */}
+        <div className="px-4 pb-6 space-y-6">
+          {/* Help */}
+          <div>
+            <p
+              className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${
+                !sidebarExpanded ? "text-center" : ""
+              }`}
+            >
+              {sidebarExpanded ? "Help" : "..."}
+            </p>
+            <button
+              onClick={() => navigateTo("/admin/dashboard/documentation")}
+              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
+                pathname === "/admin/dashboard/documentation"
+                  ? "bg-blue-800 text-white font-semibold"
+                  : "text-gray-200 hover:bg-blue-700"
+              } ${!sidebarExpanded && "justify-center"}`}
+            >
+              <HelpCircle size={iconSize} />
+              {sidebarExpanded && <span>Documentation</span>}
+            </button>
+          </div>
+
+          {/* Déconnexion */}
           <button
             onClick={handleLogout}
-            className={`w-full flex items-center justify-center gap-3 py-4 bg-yellow-500 text-blue-900 font-bold rounded-xl hover:bg-yellow-400 transition shadow-lg ${!sidebarExpanded && "px-4"}`}
+            className={`w-full flex items-center justify-center gap-3 py-4 bg-yellow-500 text-blue-900 font-bold rounded-xl hover:bg-yellow-400 transition shadow-lg cursor-pointer ${
+              !sidebarExpanded && "px-4"
+            }`}
           >
-            <LogOut size={22} />
+            <LogOut size={iconSize} />
             {sidebarExpanded && <span>Déconnexion</span>}
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className={`pt-20 transition-all duration-300 ${sidebarExpanded ? "ml-64" : "ml-20"}`}>
+      <main
+        className={`pt-20 transition-all duration-300 ${
+          sidebarExpanded ? "ml-68" : "ml-20"
+        }`}
+      >
         <div className="px-8">
-          {children}
+          <div key={pathname} className="animate-in fade-in duration-500">
+            {children}
+          </div>
         </div>
       </main>
     </div>
