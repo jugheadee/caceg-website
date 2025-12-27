@@ -1,7 +1,14 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Image from "next/image";
 
@@ -25,7 +32,9 @@ export default function GestionFormations() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [formationToDelete, setFormationToDelete] = useState<string | null>(null);
+  const [formationToDelete, setFormationToDelete] = useState<string | null>(
+    null
+  );
   const [formData, setFormData] = useState({
     title: '',
     instructor: '',
@@ -151,7 +160,7 @@ export default function GestionFormations() {
   const handleEdit = (formation: Formation) => {
     setFormData({
       title: formation.title,
-      instructor: formation.instructor || '',
+      instructor: formation.instructor || "",
       description: formation.description,
       price: formation.price,
       image: formation.image,
@@ -210,7 +219,9 @@ export default function GestionFormations() {
     <div className="min-h-screen bg-gray-50 pt-20">
       <div className="max-w-7xl mx-auto px-8 py-10">
         <div className="flex justify-between items-center mb-12">
-          <h1 className="text-4xl font-bold text-blue-900">Gestion des Formations</h1>
+          <h1 className="text-4xl font-bold text-blue-900">
+            Gestion des Formations
+          </h1>
           <button
             onClick={() => {
               setEditingId(null);
@@ -256,11 +267,17 @@ export default function GestionFormations() {
                 </tr>
               ) : (
                 formations.map((f) => (
-                  <tr key={f.id} className="border-b hover:bg-gray-50 transition">
+                  <tr
+                    key={f.id}
+                    className="border-b hover:bg-gray-50 transition"
+                  >
                     <td className="px-6 py-4">
                       <div className="w-20 h-20 relative rounded-lg overflow-hidden shadow-md">
                         <Image
-                          src={f.image || "https://via.placeholder.com/600x400?text=Formation+CACEG"}
+                          src={
+                            f.image ||
+                            "https://via.placeholder.com/600x400?text=Formation+CACEG"
+                          }
                           alt={f.title}
                           fill
                           className="object-cover"
@@ -268,17 +285,31 @@ export default function GestionFormations() {
                       </div>
                     </td>
                     <td className="px-6 py-4 font-medium">{f.title}</td>
-                    <td className="px-6 py-4">{f.instructor || "Non défini"}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-4 py-2 rounded-full text-sm font-bold ${f.price === 'Gratuit' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                      {f.instructor || "Non défini"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-4 py-2 rounded-full text-sm font-bold ${
+                          f.price === "Gratuit"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
                         {f.price}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button onClick={() => handleEdit(f)} className="text-blue-600 hover:text-blue-800 mr-6 text-lg">
+                      <button
+                        onClick={() => handleEdit(f)}
+                        className="text-blue-600 hover:text-blue-800 mr-6 text-lg"
+                      >
                         ✏️
                       </button>
-                      <button onClick={() => openDeleteModal(f.id)} className="text-red-600 hover:text-red-800 text-lg">
+                      <button
+                        onClick={() => openDeleteModal(f.id)}
+                        className="text-red-600 hover:text-red-800 text-lg"
+                      >
                         🗑️
                       </button>
                     </td>
@@ -397,7 +428,11 @@ export default function GestionFormations() {
                 <button type="submit" disabled={uploading} className="flex-1 bg-yellow-500 text-blue-900 font-bold py-4 rounded-xl hover:bg-yellow-400 transition disabled:opacity-70">
                   {uploading ? "Enregistrement..." : (editingId ? "Modifier" : "Ajouter")}
                 </button>
-                <button type="button" onClick={closeModal} className="flex-1 bg-gray-300 text-gray-800 font-bold py-4 rounded-xl hover:bg-gray-400 transition">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="flex-1 bg-gray-300 text-gray-800 font-bold py-4 rounded-xl hover:bg-gray-400 transition"
+                >
                   Annuler
                 </button>
               </div>
@@ -408,8 +443,14 @@ export default function GestionFormations() {
 
       {/* Modal Suppression */}
       {deleteModalOpen && (
-        <div className="fixed inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-300" onClick={cancelDelete}>
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 animate-in fade-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-300"
+          onClick={cancelDelete}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 animate-in fade-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="text-center mb-6">
               <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
                 <span className="text-red-600 text-3xl">🗑️</span>
