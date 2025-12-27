@@ -18,7 +18,6 @@ export default function CertificationISOPage() {
       <IntroSection />
       <BenefitsSection />
       <ServicesSection />
-      <CallToAction />
       <Footer />
     </main>
   );
