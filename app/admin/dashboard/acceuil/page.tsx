@@ -12,49 +12,73 @@ import {
   Users,
   Mail,
   ChevronDown,
-  ChevronUp,  
+  ChevronUp,
 } from "lucide-react";
 
 interface Formation {
   id: string;
   title: string;
-  duration: string;
+  duration?: string;
   price: string;
-  studentsCount: number;
+}
+
+interface Etudiant {
+  id: string;
+  prenom: string;
+  nom: string;
+  dateInscription: string;
 }
 
 export default function AdminDashboard() {
   const [formations, setFormations] = useState<Formation[]>([]);
+  const [etudiantsParFormation, setEtudiantsParFormation] = useState<Record<string, Etudiant[]>>({});
   const [expandedFormation, setExpandedFormation] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"formations" | "etudiants" | "demandes">("formations");
+  const [loading, setLoading] = useState(true);
 
-  // Mock data pour étudiants (à remplacer par Firestore plus tard)
-  const allStudents = [
-    { name: "Ahmed Benali", formation: "Excel Avancé" },
-    { name: "Fatima Zahra", formation: "Management de Projet" },
-    { name: "Karim Djoudi", formation: "Excel Avancé" },
-  ];
-
-  const formRequestsCount = 7;
-
-  // Fetch formations depuis Firestore (si tu les as déjà)
+  // Fetch formations
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "formations"), (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data(),
+        title: doc.data().title,
+        duration: doc.data().duration || "",
+        price: doc.data().price,
       } as Formation));
       setFormations(data);
     });
     return () => unsubscribe();
   }, []);
 
-  // Si pas encore de données Firestore, fallback mock
-  const displayFormations = formations.length > 0 ? formations : [
-    { id: "1", title: "Formation Excel Avancé", duration: "3 jours", price: "45 000 DZD", studentsCount: 12 },
-    { id: "2", title: "Management de Projet", duration: "5 jours", price: "80 000 DZD", studentsCount: 8 },
-    { id: "3", title: "Comptabilité Générale", duration: "10 jours", price: "120 000 DZD", studentsCount: 15 },
-  ];
+  // Fetch étudiants acceptés et les grouper par formation
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "etudiants"), (snapshot) => {
+      const map: Record<string, Etudiant[]> = {};
+
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        const formationId = data.formationId;
+
+        if (!map[formationId]) {
+          map[formationId] = [];
+        }
+
+        map[formationId].push({
+          id: doc.id,
+          prenom: data.prenom,
+          nom: data.nom,
+          dateInscription: data.dateInscription,
+        });
+      });
+
+      setEtudiantsParFormation(map);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const formRequestsCount = 7; // À connecter plus tard si tu as une collection demandes
 
   return (
     <div className="max-w-7xl mx-auto py-10">
@@ -78,13 +102,13 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
           <h3 className="text-gray-600 text-sm">Total Formations</h3>
           <p className="text-4xl font-bold text-blue-900 mt-2">
-            {displayFormations.length}
+            {formations.length}
           </p>
         </div>
         <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
           <h3 className="text-gray-600 text-sm">Étudiants Inscrits</h3>
           <p className="text-4xl font-bold text-blue-900 mt-2">
-            {allStudents.length}
+            {Object.values(etudiantsParFormation).flat().length}
           </p>
         </div>
         <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
@@ -141,54 +165,66 @@ export default function AdminDashboard() {
             </div>
 
             <div className="divide-y divide-gray-100">
-              {displayFormations.map((formation) => (
-                <div key={formation.id}>
-                  <button
-                    onClick={() =>
-                      setExpandedFormation(
-                        expandedFormation === formation.id ? null : formation.id
-                      )
-                    }
-                    className="w-full px-6 py-5 flex justify-between items-center hover:bg-gray-50 transition text-left"
-                  >
-                    <div>
-                      <p className="font-semibold text-lg text-gray-900">
-                        {formation.title}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {formation.duration} • {formation.price}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-blue-900 font-medium">
-                        {formation.studentsCount} étudiants
-                      </span>
-                      {expandedFormation === formation.id ? (
-                        <ChevronUp size={20} />
-                      ) : (
-                        <ChevronDown size={20} />
-                      )}
-                    </div>
-                  </button>
+              {formations.map((formation) => {
+                const etudiants = etudiantsParFormation[formation.id] || [];
+                const count = etudiants.length;
 
-                  {expandedFormation === formation.id && (
-                    <div className="px-6 pb-5 bg-gray-50">
-                      <p className="text-gray-700 font-medium mb-3">
-                        Liste des étudiants inscrits :
-                      </p>
-                      <ul className="space-y-2">
-                        {allStudents
-                          .filter((s) => s.formation.includes(formation.title.split(" ")[1] || ""))
-                          .map((student, i) => (
-                            <li key={i} className="bg-white px-4 py-3 rounded-lg shadow-sm">
-                              <p className="font-medium">{student.name}</p>
-                            </li>
-                          ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ))}
+                return (
+                  <div key={formation.id}>
+                    <button
+                      onClick={() =>
+                        setExpandedFormation(
+                          expandedFormation === formation.id ? null : formation.id
+                        )
+                      }
+                      className="w-full px-6 py-5 flex justify-between items-center hover:bg-gray-50 transition text-left"
+                    >
+                      <div>
+                        <p className="font-semibold text-lg text-gray-900">
+                          {formation.title}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {formation.duration ? `${formation.duration} • ` : ""}{formation.price}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-blue-900 font-medium">
+                          {count} étudiant{count > 1 ? 's' : ''} inscrit{count > 1 ? 's' : ''}
+                        </span>
+                        {expandedFormation === formation.id ? (
+                          <ChevronUp size={20} className="text-gray-600" />
+                        ) : (
+                          <ChevronDown size={20} className="text-gray-600" />
+                        )}
+                      </div>
+                    </button>
+
+                    {expandedFormation === formation.id && (
+                      <div className="px-6 pb-5 bg-gray-50">
+                        <p className="text-gray-700 font-medium mb-3">
+                          Liste des étudiants inscrits :
+                        </p>
+                        {count === 0 ? (
+                          <p className="text-gray-500 italic">Aucun étudiant inscrit pour l'instant</p>
+                        ) : (
+                          <ul className="space-y-3">
+                            {etudiants.map((etudiant) => (
+                              <li key={etudiant.id} className="bg-white px-5 py-4 rounded-xl shadow-sm border border-gray-100">
+                                <p className="font-medium text-gray-900">
+                                  {etudiant.prenom} {etudiant.nom}
+                                </p>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  Inscrit le {new Date(etudiant.dateInscription).toLocaleDateString('fr-DZ')}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

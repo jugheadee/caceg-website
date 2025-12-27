@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import Footer from '@/components/Footer';
 
 interface Formation {
   id: string;
@@ -162,16 +163,7 @@ export default function FormationsPage() {
         </div>
       </section>
 
-      {/* Footer – garde le même que tu as déjà */}
-      <footer className="bg-blue-950 text-gray-300 py-12">
-        {/* Ton footer complet ici – je le laisse tel quel */}
-        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8">
-          {/* ... ton footer ... */}
-        </div>
-        <div className="mt-12 pt-8 border-t border-blue-800 text-center text-sm text-gray-400">
-          © {new Date().getFullYear()} CACEG. Tous droits réservés. Designed by sefrone
-        </div>
-      </footer>
+      <Footer/>
     </main>
   );
 }

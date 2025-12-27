@@ -12,6 +12,12 @@ interface Formation {
   description: string;
   price: string;
   image: string;
+  slug?: string;
+  duration?: string;
+  coursesCount?: string;
+  objectives?: string;
+  prerequisites?: string;
+  targetAudience?: string;
 }
 
 export default function GestionFormations() {
@@ -26,6 +32,11 @@ export default function GestionFormations() {
     description: '',
     price: 'Gratuit',
     image: '',
+    duration: '',
+    coursesCount: '',
+    objectives: '',
+    prerequisites: '',
+    targetAudience: '',
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -37,8 +48,6 @@ export default function GestionFormations() {
         ...doc.data(),
       } as Formation));
       setFormations(data);
-    }, (error) => {
-      console.error("Error fetching formations:", error);
     });
     return () => unsubscribe();
   }, []);
@@ -47,6 +56,18 @@ export default function GestionFormations() {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
     }
+  };
+
+  const generateSlug = (title: string) => {
+    return title
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9 -]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .substring(0, 100);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,12 +103,20 @@ export default function GestionFormations() {
         imageUrl = "https://via.placeholder.com/600x400?text=Formation+CACEG";
       }
 
+      const slug = generateSlug(formData.title);
+
       const dataToSave = {
         title: formData.title.trim(),
         instructor: formData.instructor.trim(),
         description: formData.description.trim(),
         price: formData.price,
         image: imageUrl,
+        slug: slug,
+        duration: formData.duration.trim(),
+        coursesCount: formData.coursesCount.trim(),
+        objectives: formData.objectives.trim(),
+        prerequisites: formData.prerequisites.trim(),
+        targetAudience: formData.targetAudience.trim(),
       };
 
       if (editingId) {
@@ -98,7 +127,18 @@ export default function GestionFormations() {
 
       setShowModal(false);
       setEditingId(null);
-      setFormData({ title: '', instructor: '', description: '', price: 'Gratuit', image: '' });
+      setFormData({
+        title: '',
+        instructor: '',
+        description: '',
+        price: 'Gratuit',
+        image: '',
+        duration: '',
+        coursesCount: '',
+        objectives: '',
+        prerequisites: '',
+        targetAudience: '',
+      });
       setSelectedFile(null);
     } catch (error) {
       console.error("Error saving formation:", error);
@@ -115,6 +155,11 @@ export default function GestionFormations() {
       description: formation.description,
       price: formation.price,
       image: formation.image,
+      duration: formation.duration || '',
+      coursesCount: formation.coursesCount || '',
+      objectives: formation.objectives || '',
+      prerequisites: formation.prerequisites || '',
+      targetAudience: formation.targetAudience || '',
     });
     setEditingId(formation.id);
     setSelectedFile(null);
@@ -146,7 +191,18 @@ export default function GestionFormations() {
   const closeModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setFormData({ title: '', instructor: '', description: '', price: 'Gratuit', image: '' });
+    setFormData({
+      title: '',
+      instructor: '',
+      description: '',
+      price: 'Gratuit',
+      image: '',
+      duration: '',
+      coursesCount: '',
+      objectives: '',
+      prerequisites: '',
+      targetAudience: '',
+    });
     setSelectedFile(null);
   };
 
@@ -156,7 +212,23 @@ export default function GestionFormations() {
         <div className="flex justify-between items-center mb-12">
           <h1 className="text-4xl font-bold text-blue-900">Gestion des Formations</h1>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setEditingId(null);
+              setFormData({
+                title: '',
+                instructor: '',
+                description: '',
+                price: 'Gratuit',
+                image: '',
+                duration: '',
+                coursesCount: '',
+                objectives: `\n- \n- \n- \n- \n- \n- `,
+                prerequisites: '',
+                targetAudience: '',
+              });
+              setSelectedFile(null);
+              setShowModal(true);
+            }}
             className="bg-yellow-500 text-blue-900 font-bold px-8 py-4 rounded-xl hover:bg-yellow-400 transition shadow-lg"
           >
             + Ajouter une formation
@@ -218,27 +290,110 @@ export default function GestionFormations() {
         </div>
       </div>
 
-      {/* Modal Ajout/Modification – smooth */}
+      {/* Modal Ajout/Modification */}
       {showModal && (
         <div className="fixed inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-300" onClick={closeModal}>
-          <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-2xl w-full mx-4 animate-in fade-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-3xl w-full mx-4 overflow-y-auto max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-3xl font-bold text-blue-900 mb-8">
               {editingId ? "Modifier la formation" : "Nouvelle formation"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <input type="text" placeholder="Titre de la formation" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
-              <input type="text" placeholder="Instructeur (facultatif)" value={formData.instructor} onChange={(e) => setFormData({ ...formData, instructor: e.target.value })} className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
-              <textarea placeholder="Description détaillée" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required rows={5} className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition resize-none" />
-              <input type="text" placeholder="Prix (ex: Gratuit ou 45 000 DZD)" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
+              <input
+                type="text"
+                placeholder="Titre de la formation *"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+              />
+
+              <input
+                type="text"
+                placeholder="Instructeur (facultatif)"
+                value={formData.instructor}
+                onChange={(e) => setFormData({ ...formData, instructor: e.target.value })}
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+              />
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <input
+                  type="text"
+                  placeholder="Durée (ex: 5 jours, 30 heures)"
+                  value={formData.duration}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+                />
+                <input
+                  type="text"
+                  placeholder="Nombre de cours/modules (ex: 12)"
+                  value={formData.coursesCount}
+                  onChange={(e) => setFormData({ ...formData, coursesCount: e.target.value })}
+                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+                />
+              </div>
+
+              <textarea
+                placeholder="Description détaillée *"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                required
+                rows={6}
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition resize-none"
+              />
+
+              <div className="space-y-4">
+                <label className="block text-blue-900 font-semibold">
+                  Objectifs de la formation
+                </label>
+                <textarea
+                  placeholder="Écrivez chaque objectif sur une ligne avec - devant"
+                  value={formData.objectives}
+                  onChange={(e) => setFormData({ ...formData, objectives: e.target.value })}
+                  rows={12}
+                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition resize-none font-mono text-sm"
+                />
+              </div>
+
+              <textarea
+                placeholder="Prérequis (facultatif)"
+                value={formData.prerequisites}
+                onChange={(e) => setFormData({ ...formData, prerequisites: e.target.value })}
+                rows={4}
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition resize-none"
+              />
+
+              <input
+                type="text"
+                placeholder="Public cible (ex: Managers, étudiants, entrepreneurs...)"
+                value={formData.targetAudience}
+                onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+              />
+
+              <input
+                type="text"
+                placeholder="Prix (ex: Gratuit ou 45 000 DZD) *"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                required
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+              />
+
               <div>
                 <label className="block text-blue-900 font-semibold mb-2">
                   Image de la formation {editingId ? "(optionnel)" : ""}
                 </label>
-                <input type="file" accept="image/*" onChange={handleFileChange} className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:bg-yellow-500 file:text-blue-900 file:font-bold hover:file:bg-yellow-400 transition" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:bg-yellow-500 file:text-blue-900 file:font-bold hover:file:bg-yellow-400 transition"
+                />
                 {selectedFile && <p className="mt-2 text-sm text-gray-600">Nouveau fichier : {selectedFile.name}</p>}
                 {editingId && formData.image && !selectedFile && <p className="mt-2 text-sm text-gray-600">Image actuelle conservée</p>}
               </div>
-              <div className="flex gap-4 pt-4">
+
+              <div className="flex gap-4 pt-6">
                 <button type="submit" disabled={uploading} className="flex-1 bg-yellow-500 text-blue-900 font-bold py-4 rounded-xl hover:bg-yellow-400 transition disabled:opacity-70">
                   {uploading ? "Enregistrement..." : (editingId ? "Modifier" : "Ajouter")}
                 </button>
@@ -251,7 +406,7 @@ export default function GestionFormations() {
         </div>
       )}
 
-      {/* Modal Suppression – smooth & pro */}
+      {/* Modal Suppression */}
       {deleteModalOpen && (
         <div className="fixed inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-300" onClick={cancelDelete}>
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 animate-in fade-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>

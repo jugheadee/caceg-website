@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { onSnapshot, collection } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+
 import Image from "next/image";
 import {
   Menu,
@@ -28,6 +30,12 @@ export default function AdminProtectedLayout({ children }: { children: React.Rea
   const router = useRouter();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [currentPath, setCurrentPath] = useState<string>("");
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  useEffect(() => {
+    setCurrentPath(window.location.pathname);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -47,11 +55,15 @@ export default function AdminProtectedLayout({ children }: { children: React.Rea
 
     return () => unsubscribe();
   }, [router]);
-  const [currentPath, setCurrentPath] = useState<string>("");
 
-useEffect(() => {
-  setCurrentPath(window.location.pathname);
-}, []);
+  // Compteur demandes en attente en temps réel
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "inscriptions"), (snapshot) => {
+      setPendingRequestsCount(snapshot.size);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleLogout = async () => {
     localStorage.removeItem("adminLoginTime");
@@ -109,66 +121,90 @@ useEffect(() => {
         </div>
       </header>
 
-      {/* Sidebar bleu foncé – couleurs corrigées */}
+      {/* Sidebar bleu foncé */}
       <aside className={`fixed left-0 top-16 bottom-0 bg-blue-900 text-white transition-all duration-300 z-40 flex flex-col ${sidebarExpanded ? "w-64" : "w-20"}`}>
-       <nav className="flex-1 py-6 px-4 space-y-6">
-  {/* Principal */}
-  <div>
-    <p className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${!sidebarExpanded ? "text-center" : ""}`}>
-      {sidebarExpanded ? "Principal" : "..."}
-    </p>
-    <a 
-      href="/admin/dashboard/acceuil" 
-      className={`flex items-center gap-4 py-3 px-4 rounded-xl font-medium transition ${
-        currentPath === "/admin/dashboard/acceuil" 
-          ? "bg-blue-800 text-blue-900" 
-          : "text-gray-200 hover:bg-blue-700"
-      } ${!sidebarExpanded && "justify-center"}`}
-    >
-      <LayoutDashboard size={22} />
-      {sidebarExpanded && <span>Dashboard</span>}
-    </a>
-  </div>
+        <nav className="flex-1 py-6 px-4 space-y-6">
+          {/* Principal */}
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${!sidebarExpanded ? "text-center" : ""}`}>
+              {sidebarExpanded ? "Principal" : "..."}
+            </p>
+            <a 
+              href="/admin/dashboard/acceuil" 
+              className={`flex items-center gap-4 py-3 px-4 rounded-xl font-medium transition ${
+                currentPath === "/admin/dashboard/acceuil" 
+                  ? "bg-blue-800 text-white" 
+                  : "text-gray-200 hover:bg-blue-700"
+              } ${!sidebarExpanded && "justify-center"}`}
+            >
+              <LayoutDashboard size={22} />
+              {sidebarExpanded && <span>Dashboard</span>}
+            </a>
+          </div>
 
-  {/* Forms and Datas */}
-  <div>
-    <p className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${!sidebarExpanded ? "text-center" : ""}`}>
-      {sidebarExpanded ? "Forms and Datas" : "..."}
-    </p>
-    <a 
-      href="/admin/dashboard/gestion-formations" 
-      className={`flex items-center gap-4 py-3 px-4 rounded-lg transition ${
-        currentPath === "/admin/dashboard/gestion-formations" 
-          ? "bg-blue-800 text-blue-900" 
-          : "text-gray-200 hover:bg-blue-700"
-      } ${!sidebarExpanded && "justify-center"}`}
-    >
-      <BookOpen size={22} />
-      {sidebarExpanded && <span>Gestion Formations</span>}
-    </a>
+          {/* Forms and Datas */}
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${!sidebarExpanded ? "text-center" : ""}`}>
+              {sidebarExpanded ? "Forms and Datas" : "..."}
+            </p>
+            <a 
+              href="/admin/dashboard/gestion-formations" 
+              className={`flex items-center gap-4 py-3 px-4 rounded-lg transition ${
+                currentPath === "/admin/dashboard/gestion-formations" 
+                  ? "bg-blue-800 text-white" 
+                  : "text-gray-200 hover:bg-blue-700"
+              } ${!sidebarExpanded && "justify-center"}`}
+            >
+              <BookOpen size={22} />
+              {sidebarExpanded && <span>Gestion Formations</span>}
+            </a>
 
-    {/* Les autres liens (Étudiants, Demandes, etc.) – même principe si tu veux */}
-    <a href="#" className={`flex items-center gap-4 py-3 px-4 rounded-lg transition text-gray-200 hover:bg-blue-800 ${!sidebarExpanded && "justify-center"}`}>
-      <Users size={22} />
-      {sidebarExpanded && <span>Gestion Étudiants</span>}
-    </a>
-    <a href="#" className={`flex items-center gap-4 py-3 px-4 rounded-lg transition text-gray-200 hover:bg-blue-800 ${!sidebarExpanded && "justify-center"}`}>
-      <Mail size={22} />
-      {sidebarExpanded && <span>Demandes de Formulaires</span>}
-    </a>
-  </div>
+            <a 
+              href="#" 
+              className={`flex items-center gap-4 py-3 px-4 rounded-lg transition text-gray-200 hover:bg-blue-800 ${!sidebarExpanded && "justify-center"}`}
+            >
+              <Users size={22} />
+              {sidebarExpanded && <span>Gestion Étudiants</span>}
+            </a>
 
-  {/* Help */}
-  <div>
-    <p className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${!sidebarExpanded ? "text-center" : ""}`}>
-      {sidebarExpanded ? "Help" : "..."}
-    </p>
-    <a href="#" className={`flex items-center gap-4 py-3 px-4 rounded-lg transition text-gray-200 hover:bg-blue-800 ${!sidebarExpanded && "justify-center"}`}>
-      <HelpCircle size={22} />
-      {sidebarExpanded && <span>Documentation</span>}
-    </a>
-  </div>
-</nav>
+            {/* Demandes de Formulaires avec badge rouge au-dessus de l'icône */}
+            <div className="relative">
+              <a 
+                href="/admin/dashboard/demande-formulaires" 
+                className={`flex items-center gap-4 py-3 px-4 rounded-lg transition ${
+                  currentPath === "/admin/demandes-formulaires"
+                    ? "bg-blue-800 text-white"
+                    : "text-gray-200 hover:bg-blue-800"
+                } ${!sidebarExpanded && "justify-center"}`}
+              >
+                <div className="relative">
+                  <Mail size={22} />
+                  {/* Badge rouge centré au-dessus et légèrement à droite */}
+                  {pendingRequestsCount > 0 && (
+                    <span className="absolute -top-2 left-1/2 translate-x-2 bg-red-600 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center shadow-lg animate-pulse">
+                      {pendingRequestsCount > 99 ? "99+" : pendingRequestsCount}
+                    </span>
+                  )}
+                </div>
+                {sidebarExpanded && <span>Demandes de Formulaires</span>}
+              </a>
+            </div>
+          </div>
+
+          {/* Help */}
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${!sidebarExpanded ? "text-center" : ""}`}>
+              {sidebarExpanded ? "Help" : "..."}
+            </p>
+            <a 
+              href="#" 
+              className={`flex items-center gap-4 py-3 px-4 rounded-lg transition text-gray-200 hover:bg-blue-800 ${!sidebarExpanded && "justify-center"}`}
+            >
+              <HelpCircle size={22} />
+              {sidebarExpanded && <span>Documentation</span>}
+            </a>
+          </div>
+        </nav>
 
         <div className="px-4 pb-6">
           <button

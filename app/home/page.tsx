@@ -183,7 +183,7 @@ export default function Home() {
               Nous avons pour mission d'accompagner les entreprises dans leurs projets d'évolution et de développement afin de les propulser vers la réussite de leurs objectifs de performance.
             </p>
             <Link
-              href="/etudes"
+              href="/consulting"
               className="inline-block bg-yellow-500 text-blue-900 font-bold px-8 py-4 rounded-lg hover:bg-yellow-400 transition"
             >
               Lire Plus

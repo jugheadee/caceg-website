@@ -5,19 +5,14 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'via.placeholder.com',
-        port: '',
-        pathname: '**',
-      },
-      // Ajoute d'autres domaines si besoin plus tard (ex: ImgBB, Firebase Storage)
-      {
-        protocol: 'https',
-        hostname: 'i.ibb.co',
-        pathname: '**',
       },
       {
         protocol: 'https',
         hostname: 'firebasestorage.googleapis.com',
-        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ibb.co', // si tu utilises ImgBB plus tard
       },
     ],
   },

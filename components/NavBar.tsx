@@ -37,14 +37,7 @@ export default function Navbar() {
   </Link>
 </li>
 
-          <li className="px-4 border-l border-gray-300">
-            <Link
-              href="/actualites"
-              className="hover:text-amber-600 transition"
-            >
-              Actualités
-            </Link>
-          </li>
+         
 
           {/* Formations Dropdown */}
           <li className="group relative px-4 border-l border-gray-300">
