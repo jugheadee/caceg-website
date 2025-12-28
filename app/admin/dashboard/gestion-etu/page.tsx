@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState, useRef } from "react";
 import {
@@ -25,64 +25,13 @@ import {
 } from "lucide-react";
 
 const wilayas = [
-  "Adrar",
-  "Chlef",
-  "Laghouat",
-  "Oum El Bouaghi",
-  "Batna",
-  "Béjaïa",
-  "Biskra",
-  "Béchar",
-  "Blida",
-  "Bouira",
-  "Tamanrasset",
-  "Tébessa",
-  "Tlemcen",
-  "Tiaret",
-  "Tizi Ouzou",
-  "Alger",
-  "Djelfa",
-  "Jijel",
-  "Sétif",
-  "Saïda",
-  "Skikda",
-  "Sidi Bel Abbès",
-  "Annaba",
-  "Guelma",
-  "Constantine",
-  "Médéa",
-  "Mostaganem",
-  "M'Sila",
-  "Mascara",
-  "Ouargla",
-  "Oran",
-  "El Bayadh",
-  "Illizi",
-  "Bordj Bou Arreridj",
-  "Boumerdès",
-  "El Tarf",
-  "Tindouf",
-  "Tissemsilt",
-  "El Oued",
-  "Khenchela",
-  "Souk Ahras",
-  "Tipaza",
-  "Mila",
-  "Aïn Defla",
-  "Naâma",
-  "Aïn Témouchent",
-  "Ghardaïa",
-  "Relizane",
-  "Timimoun",
-  "Bordj Badji Mokhtar",
-  "Ouled Djellal",
-  "Béni Abbès",
-  "In Salah",
-  "In Guezzam",
-  "Touggourt",
-  "Djanet",
-  "El M'Ghair",
-  "El Meniaa",
+  "Adrar", "Chlef", "Laghouat", "Oum El Bouaghi", "Batna", "Béjaïa", "Biskra", "Béchar", "Blida", "Bouira",
+  "Tamanrasset", "Tébessa", "Tlemcen", "Tiaret", "Tizi Ouzou", "Alger", "Djelfa", "Jijel", "Sétif", "Saïda",
+  "Skikda", "Sidi Bel Abbès", "Annaba", "Guelma", "Constantine", "Médéa", "Mostaganem", "M'Sila", "Mascara",
+  "Ouargla", "Oran", "El Bayadh", "Illizi", "Bordj Bou Arreridj", "Boumerdès", "El Tarf", "Tindouf", "Tissemsilt",
+  "El Oued", "Khenchela", "Souk Ahras", "Tipaza", "Mila", "Aïn Defla", "Naâma", "Aïn Témouchent", "Ghardaïa",
+  "Relizane", "Timimoun", "Bordj Badji Mokhtar", "Ouled Djellal", "Béni Abbès", "In Salah", "In Guezzam",
+  "Touggourt", "Djanet", "El M'Ghair", "El Meniaa",
 ];
 
 interface Formation {
@@ -112,7 +61,6 @@ const allColumns = [
   { key: "formation", label: "Formation" },
 ];
 
-// Custom Select Component
 function CustomSelect({
   options,
   value,
@@ -197,9 +145,7 @@ export default function GestionEtudiants() {
   const [filterFormation, setFilterFormation] = useState("");
   const [filterWilaya, setFilterWilaya] = useState("");
 
-  const [sortBy, setSortBy] = useState<
-    "dateDesc" | "dateAsc" | "nameAsc" | "nameDesc"
-  >("dateDesc");
+  const [sortBy, setSortBy] = useState<"dateDesc" | "dateAsc" | "nameAsc" | "nameDesc">("dateDesc");
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(
     allColumns.map((c) => c.key)
@@ -260,22 +206,15 @@ export default function GestionEtudiants() {
       });
     }
 
-    if (filterFormation)
-      filtered = filtered.filter((e) => e.formationId === filterFormation);
-    if (filterWilaya)
-      filtered = filtered.filter((e) => e.wilaya === filterWilaya);
+    if (filterFormation) filtered = filtered.filter((e) => e.formationId === filterFormation);
+    if (filterWilaya) filtered = filtered.filter((e) => e.wilaya === filterWilaya);
 
-    filtered.sort((a, b) => {
+    // TRI corrigé : appliqué sur toutes les données filtrées AVANT pagination
+    filtered = [...filtered].sort((a, b) => {
       if (sortBy === "dateDesc")
-        return (
-          getInscriptionDate(b.dateInscription).getTime() -
-          getInscriptionDate(a.dateInscription).getTime()
-        );
+        return getInscriptionDate(b.dateInscription).getTime() - getInscriptionDate(a.dateInscription).getTime();
       if (sortBy === "dateAsc")
-        return (
-          getInscriptionDate(a.dateInscription).getTime() -
-          getInscriptionDate(b.dateInscription).getTime()
-        );
+        return getInscriptionDate(a.dateInscription).getTime() - getInscriptionDate(b.dateInscription).getTime();
       if (sortBy === "nameAsc")
         return `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`);
       if (sortBy === "nameDesc")
@@ -284,7 +223,7 @@ export default function GestionEtudiants() {
     });
 
     setEtudiants(filtered);
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset page à chaque changement
   }, [searchQuery, filterFormation, filterWilaya, sortBy, allEtudiants]);
 
   const totalPages = Math.ceil(etudiants.length / itemsPerPage);
@@ -301,11 +240,7 @@ export default function GestionEtudiants() {
     } else {
       pages.push(1, 2);
       if (currentPage > 4) pages.push("...");
-      for (
-        let i = Math.max(3, currentPage - 1);
-        i <= Math.min(totalPages - 2, currentPage + 1);
-        i++
-      ) {
+      for (let i = Math.max(3, currentPage - 1); i <= Math.min(totalPages - 2, currentPage + 1); i++) {
         pages.push(i);
       }
       if (currentPage < totalPages - 3) pages.push("...");
@@ -314,15 +249,13 @@ export default function GestionEtudiants() {
     return pages;
   };
 
-  // SAFE toggle — prevents hiding the last column
   const toggleColumn = (key: string) => {
     setVisibleColumns((prev) => {
       const isCurrentlyVisible = prev.includes(key);
       const visibleCount = prev.length;
 
-      // Prevent turning off the last column
       if (isCurrentlyVisible && visibleCount === 1) {
-        return prev; // do nothing
+        return prev;
       }
 
       if (isCurrentlyVisible) {
@@ -642,11 +575,6 @@ export default function GestionEtudiants() {
                         </label>
                       ))}
                     </div>
-                    {visibleColumns.length === 0 && (
-                      <div className="px-6 pt-3 text-sm text-gray-500 italic text-center">
-                        Aucune colonne visible — cochez-en au moins une
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
