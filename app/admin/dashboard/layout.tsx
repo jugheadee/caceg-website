@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import Image from "next/image";
 import {
   Menu,
@@ -17,8 +17,6 @@ import {
   HelpCircle,
 } from "lucide-react";
 
-const ONE_HOUR = 60 * 60 * 1000;
-
 export default function AdminProtectedLayout({
   children,
 }: {
@@ -28,43 +26,43 @@ export default function AdminProtectedLayout({
   const pathname = usePathname();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [currentPath, setCurrentPath] = useState<string>("");
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
+  // Vérification de session à chaque navigation (client-side)
   useEffect(() => {
-    setCurrentPath(window.location.pathname);
-  }, []);
+    const checkSession = async () => {
+      try {
+        const res = await fetch("/api/auth-check", {
+          credentials: "include",
+        });
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (!currentUser) {
-        router.replace("/admin/login");
-        return;
+        const data = await res.json();
+
+        if (!res.ok || !data.valid) {
+          router.replace("/admin/session-expired");
+        }
+      } catch (error) {
+        router.replace("/admin/session-expired");
       }
+    };
 
-      const loginTime = localStorage.getItem("adminLoginTime");
-      if (!loginTime || Date.now() - Number(loginTime) > ONE_HOUR) {
-        localStorage.removeItem("adminLoginTime");
-        await signOut(auth);
-        router.replace("/admin/login");
-        return;
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+    checkSession();
+  }, [pathname, router]);
 
   const handleLogout = async () => {
-    localStorage.removeItem("adminLoginTime");
-    await signOut(auth);
-    router.push("/admin/login");
+    try {
+      await fetch("/api/logout", { method: "POST" });
+      await signOut(auth);
+      router.push("/admin/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      router.push("/admin/login");
+    }
   };
 
   const navigateTo = (path: string) => {
     router.push(path);
   };
 
-  // Taille des icônes : plus grande quand sidebar fermée
   const iconSize = sidebarExpanded ? 22 : 28;
 
   return (
@@ -197,9 +195,7 @@ export default function AdminProtectedLayout({
           </div>
         </nav>
 
-        {/* Help + Déconnexion – en bas */}
         <div className="px-4 pb-6 space-y-6">
-          {/* Help */}
           <div>
             <p
               className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${
@@ -221,7 +217,6 @@ export default function AdminProtectedLayout({
             </button>
           </div>
 
-          {/* Déconnexion */}
           <button
             onClick={handleLogout}
             className={`w-full flex items-center justify-center gap-3 py-4 bg-yellow-500 text-blue-900 font-bold rounded-xl hover:bg-yellow-400 transition shadow-lg cursor-pointer ${
@@ -234,7 +229,6 @@ export default function AdminProtectedLayout({
         </div>
       </aside>
 
-      {/* Main content */}
       <main
         className={`pt-20 transition-all duration-300 ${
           sidebarExpanded ? "ml-68" : "ml-20"
