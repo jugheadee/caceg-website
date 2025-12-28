@@ -1,8 +1,9 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { onSnapshot, collection } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import {
@@ -15,6 +16,7 @@ import {
   Users,
   Mail,
   HelpCircle,
+  FileText,
 } from "lucide-react";
 
 const ONE_HOUR = 60 * 60 * 1000;
@@ -26,17 +28,16 @@ export default function AdminProtectedLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [currentPath, setCurrentPath] = useState<string>("");
+
+  // Badges en temps réel
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [nonLusCount, setNonLusCount] = useState(0);
 
   useEffect(() => {
-    setCurrentPath(window.location.pathname);
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         router.replace("/admin/login");
         return;
@@ -51,8 +52,29 @@ export default function AdminProtectedLayout({
       }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, [router]);
+
+  // Compteur demandes de formulaires non traitées
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "inscriptions"), (snapshot) => {
+      setPendingRequestsCount(snapshot.size);
+    });
+    return () => unsub();
+  }, []);
+
+  // Compteur messages non lus
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "messages"), (snapshot) => {
+      let count = 0;
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        if (!data.lu) count++;
+      });
+      setNonLusCount(count);
+    });
+    return () => unsub();
+  }, []);
 
   const handleLogout = async () => {
     localStorage.removeItem("adminLoginTime");
@@ -64,7 +86,6 @@ export default function AdminProtectedLayout({
     router.push(path);
   };
 
-  // Taille des icônes : plus grande quand sidebar fermée
   const iconSize = sidebarExpanded ? 22 : 28;
 
   return (
@@ -162,7 +183,7 @@ export default function AdminProtectedLayout({
             <button
               onClick={() => navigateTo("/admin/dashboard/gestion-formations")}
               className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname === "/admin/dashboard/gestion-formations"
+                pathname.startsWith("/admin/gestion-formations")
                   ? "bg-blue-800 text-white font-semibold"
                   : "text-gray-200 hover:bg-blue-700"
               } ${!sidebarExpanded && "justify-center"}`}
@@ -174,7 +195,7 @@ export default function AdminProtectedLayout({
             <button
               onClick={() => navigateTo("/admin/dashboard/gestion-etu")}
               className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname === "/admin/dashboard/gestion-etu"
+                pathname.startsWith("/admin/gestion-etudiants")
                   ? "bg-blue-800 text-white font-semibold"
                   : "text-gray-200 hover:bg-blue-700"
               } ${!sidebarExpanded && "justify-center"}`}
@@ -183,22 +204,47 @@ export default function AdminProtectedLayout({
               {sidebarExpanded && <span>Gestion Étudiants</span>}
             </button>
 
-            <button
-              onClick={() => navigateTo("/admin/dashboard/demande-formulaires")}
-              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname === "/admin/dashboard/demandes"
-                  ? "bg-blue-800 text-white font-semibold"
-                  : "text-gray-200 hover:bg-blue-700"
-              } ${!sidebarExpanded && "justify-center"}`}
-            >
-              <Mail size={iconSize} />
-              {sidebarExpanded && <span>Demandes Formulaires</span>}
-            </button>
-          </div>
-        </nav>
+           {/* Demandes Formulaires avec icône formulaire/document + badge */}
+<div className="relative">
+  <button
+    onClick={() => navigateTo("/admin/dashboard/demande-formulaires")}
+    className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
+      pathname.startsWith("/admin/demandes-formulaires")
+        ? "bg-blue-800 text-white font-semibold"
+        : "text-gray-200 hover:bg-blue-700"
+    } ${!sidebarExpanded && "justify-center"}`}
+  >
+    <FileText size={iconSize} />  {/* ← Icône formulaire/document */}
+    {sidebarExpanded && <span>Demandes Formulaires</span>}
+  </button>
+  {pendingRequestsCount > 0 && (
+    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
+      {pendingRequestsCount > 99 ? "99+" : pendingRequestsCount}
+    </span>
+  )}
+</div>
 
-        {/* Help + Déconnexion – en bas */}
-        <div className="px-4 pb-6 space-y-6">
+            {/* Gestion Messages + badge */}
+            <div className="relative">
+              <button
+                onClick={() => navigateTo("/admin/dashboard/gestion-messages")}
+                className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
+                  pathname.startsWith("/admin/gestion-messages")
+                    ? "bg-blue-800 text-white font-semibold"
+                    : "text-gray-200 hover:bg-blue-700"
+                } ${!sidebarExpanded && "justify-center"}`}
+              >
+                <Mail size={iconSize} />
+                {sidebarExpanded && <span>Gestion Messages</span>}
+              </button>
+              {nonLusCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
+                  {nonLusCount > 99 ? "99+" : nonLusCount}
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Help */}
           <div>
             <p
@@ -211,7 +257,7 @@ export default function AdminProtectedLayout({
             <button
               onClick={() => navigateTo("/admin/dashboard/documentation")}
               className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname === "/admin/dashboard/documentation"
+                pathname === "/admin/documentation"
                   ? "bg-blue-800 text-white font-semibold"
                   : "text-gray-200 hover:bg-blue-700"
               } ${!sidebarExpanded && "justify-center"}`}
@@ -220,8 +266,10 @@ export default function AdminProtectedLayout({
               {sidebarExpanded && <span>Documentation</span>}
             </button>
           </div>
+        </nav>
 
-          {/* Déconnexion */}
+        {/* Déconnexion en bas */}
+        <div className="px-4 pb-6">
           <button
             onClick={handleLogout}
             className={`w-full flex items-center justify-center gap-3 py-4 bg-yellow-500 text-blue-900 font-bold rounded-xl hover:bg-yellow-400 transition shadow-lg cursor-pointer ${
