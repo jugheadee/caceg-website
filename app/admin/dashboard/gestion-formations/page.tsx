@@ -28,6 +28,7 @@ import Image from "next/image";
 interface Formation {
   id: string;
   title: string;
+  slug: string;
   instructor: string;
   description: string;
   price: string;
@@ -48,6 +49,16 @@ const allColumns = [
   { key: "price", label: "Prix" },
   { key: "dateCreation", label: "Date création" },
 ];
+
+// Génération automatique du slug
+const generateSlug = (title: string): string => {
+  return title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
 
 function CustomSelect({
   options,
@@ -157,11 +168,15 @@ export default function GestionFormations() {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "formations"), (snap) => {
-      const data = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        dateCreation: doc.data().dateCreation || new Date(),
-      } as Formation));
+      const data = snap.docs.map((doc) => {
+        const docData = doc.data();
+        return {
+          id: doc.id,
+          ...docData,
+          slug: docData.slug || generateSlug(docData.title || "untitled"),
+          dateCreation: docData.dateCreation || new Date(),
+        } as Formation;
+      });
       setFormations(data);
     });
     return () => unsub();
@@ -246,7 +261,7 @@ export default function GestionFormations() {
     }
 
     setUploading(true);
-    let imageUrl = formData.image;
+    let imageUrl = formData.image || ""; // ← Garde l'ancienne URL si pas de nouvelle image
 
     try {
       if (selectedFile) {
@@ -256,16 +271,23 @@ export default function GestionFormations() {
           method: "POST",
           body: formDataUpload,
         });
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Erreur upload: ${errorText}`);
+        }
         const data = await res.json();
         imageUrl = data.url;
       }
 
+      const slug = generateSlug(formData.title);
+
       const dataToSave = {
         title: formData.title.trim(),
+        slug: slug,
         instructor: formData.instructor.trim(),
         description: formData.description.trim(),
         price: formData.price,
-        image: imageUrl,
+        image: imageUrl, // Toujours une string valide
         duration: formData.duration.trim(),
         coursesCount: formData.coursesCount.trim(),
         objectives: formData.objectives.trim(),
@@ -282,7 +304,8 @@ export default function GestionFormations() {
 
       closeModal();
     } catch (error) {
-      alert("Erreur lors de la sauvegarde");
+      console.error("Erreur sauvegarde:", error);
+      alert("Erreur lors de la sauvegarde – vérifie la console");
     } finally {
       setUploading(false);
     }
@@ -593,93 +616,147 @@ export default function GestionFormations() {
           </table>
         </div>
 
-        {/* Modal Ajout/Édition */}
+        {/* Modal Ajout/Édition – avec labels bleus */}
         {showModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={closeModal}>
             <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-3xl w-full mx-4 overflow-y-auto max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
               <h2 className="text-3xl font-bold text-blue-900 mb-8">
                 {editingId ? "Modifier la formation" : "Nouvelle formation"}
               </h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <input
-                  type="text"
-                  placeholder="Titre de la formation *"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  required
-                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
-                />
-
-                <input
-                  type="text"
-                  placeholder="Instructeur (facultatif)"
-                  value={formData.instructor}
-                  onChange={(e) => setFormData({ ...formData, instructor: e.target.value })}
-                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
-                />
-
-                <div className="grid md:grid-cols-2 gap-6">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Titre */}
+                <div>
+                  <label className="block text-blue-900 font-bold mb-2 text-lg">
+                    Titre de la formation *
+                  </label>
                   <input
                     type="text"
-                    placeholder="Durée (ex: 5 jours, 30 heures)"
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                    className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Nombre de cours/modules (ex: 12)"
-                    value={formData.coursesCount}
-                    onChange={(e) => setFormData({ ...formData, coursesCount: e.target.value })}
+                    placeholder="Titre de la formation *"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    required
                     className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
                   />
                 </div>
 
-                <textarea
-                  placeholder="Description détaillée *"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  required
-                  rows={6}
-                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition resize-none"
-                />
-
-                <textarea
-                  placeholder="Objectifs de la formation (un par ligne avec - devant)"
-                  value={formData.objectives}
-                  onChange={(e) => setFormData({ ...formData, objectives: e.target.value })}
-                  rows={8}
-                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition resize-none font-mono text-sm"
-                />
-
-                <textarea
-                  placeholder="Prérequis (facultatif)"
-                  value={formData.prerequisites}
-                  onChange={(e) => setFormData({ ...formData, prerequisites: e.target.value })}
-                  rows={4}
-                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition resize-none"
-                />
-
-                <input
-                  type="text"
-                  placeholder="Public cible (ex: Managers, étudiants...)"
-                  value={formData.targetAudience}
-                  onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
-                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
-                />
-
-                <input
-                  type="text"
-                  placeholder="Prix (ex: Gratuit ou 45 000 DZD) *"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  required
-                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
-                />
-
+                {/* Instructeur */}
                 <div>
-                  <label className="block text-blue-900 font-semibold mb-2">
-                    Image de la formation {editingId ? "(optionnel)" : ""}
+                  <label className="block text-blue-900 font-bold mb-2 text-lg">
+                    Instructeur (facultatif)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Instructeur (facultatif)"
+                    value={formData.instructor}
+                    onChange={(e) => setFormData({ ...formData, instructor: e.target.value })}
+                    className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+                  />
+                </div>
+
+                {/* Durée & Modules */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-blue-900 font-bold mb-2 text-lg">
+                      Durée (ex: 6 mois)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Durée (ex: 6 mois)"
+                      value={formData.duration}
+                      onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                      className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-blue-900 font-bold mb-2 text-lg">
+                      Nombre de modules
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Nombre de modules"
+                      value={formData.coursesCount}
+                      onChange={(e) => setFormData({ ...formData, coursesCount: e.target.value })}
+                      className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-blue-900 font-bold mb-2 text-lg">
+                    Description détaillée *
+                  </label>
+                  <textarea
+                    placeholder="Description détaillée *"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    required
+                    rows={6}
+                    className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition resize-none"
+                  />
+                </div>
+
+                {/* Objectifs */}
+                <div>
+                  <label className="block text-blue-900 font-bold mb-2 text-lg">
+                    Objectifs (un par ligne avec - devant)
+                  </label>
+                  <textarea
+                    placeholder="Objectifs (un par ligne avec - devant)"
+                    value={formData.objectives}
+                    onChange={(e) => setFormData({ ...formData, objectives: e.target.value })}
+                    rows={8}
+                    className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition resize-none font-mono text-sm"
+                  />
+                </div>
+
+                {/* Prérequis */}
+                <div>
+                  <label className="block text-blue-900 font-bold mb-2 text-lg">
+                    Prérequis
+                  </label>
+                  <textarea
+                    placeholder="Prérequis"
+                    value={formData.prerequisites}
+                    onChange={(e) => setFormData({ ...formData, prerequisites: e.target.value })}
+                    rows={4}
+                    className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition resize-none"
+                  />
+                </div>
+
+                {/* Public cible */}
+                <div>
+                  <label className="block text-blue-900 font-bold mb-2 text-lg">
+                    Public cible
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Public cible"
+                    value={formData.targetAudience}
+                    onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
+                    className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+                  />
+                </div>
+
+                {/* Prix */}
+                <div>
+                  <label className="block text-blue-900 font-bold mb-2 text-lg">
+                    Prix *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Prix (ex: 45 000 DA ou Gratuit)"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    required
+                    className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+                  />
+                </div>
+
+                {/* Image */}
+                <div>
+                  <label className="block text-blue-900 font-bold mb-2 text-lg">
+                    Image de la formation
                   </label>
                   <input
                     type="file"
@@ -687,10 +764,11 @@ export default function GestionFormations() {
                     onChange={handleFileChange}
                     className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:bg-yellow-500 file:text-blue-900 file:font-bold hover:file:bg-yellow-400 transition"
                   />
-                  {selectedFile && <p className="mt-2 text-sm text-gray-600">Nouveau fichier : {selectedFile.name}</p>}
+                  {selectedFile && <p className="mt-2 text-sm text-gray-600">Fichier sélectionné : {selectedFile.name}</p>}
                   {editingId && formData.image && !selectedFile && <p className="mt-2 text-sm text-gray-600">Image actuelle conservée</p>}
                 </div>
 
+                {/* Boutons */}
                 <div className="flex gap-4 pt-6">
                   <button type="submit" disabled={uploading} className="flex-1 bg-yellow-500 text-blue-900 font-bold py-4 rounded-xl hover:bg-yellow-400 transition disabled:opacity-70">
                     {uploading ? "Enregistrement..." : (editingId ? "Modifier" : "Ajouter")}
@@ -712,7 +790,7 @@ export default function GestionFormations() {
                 Confirmer la suppression
               </h3>
               <p className="text-gray-600 text-center mb-8">
-                Supprimer {selectedIds.size} formation(s) sélectionnée(s) ?<br />
+                Supprimer {selectedIds.size} formation(s) ?<br />
                 Cette action est irréversible.
               </p>
               <div className="flex gap-4">

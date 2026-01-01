@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Footer from '@/components/Footer';
+import { Search } from "lucide-react";
 
 interface Formation {
   id: string;
@@ -22,10 +23,12 @@ const ITEMS_PER_PAGE = 6;
 
 export default function FormationsPage() {
   const [formations, setFormations] = useState<Formation[]>([]);
+  const [filteredFormations, setFilteredFormations] = useState<Formation[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Chargement des formations depuis Firestore en temps réel
+  // Chargement des formations depuis Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "formations"), (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
@@ -33,6 +36,7 @@ export default function FormationsPage() {
         ...doc.data(),
       } as Formation));
       setFormations(data);
+      setFilteredFormations(data);
       setLoading(false);
     }, (error) => {
       console.error("Erreur chargement formations:", error);
@@ -42,9 +46,25 @@ export default function FormationsPage() {
     return () => unsubscribe();
   }, []);
 
-  const totalPages = Math.ceil(formations.length / ITEMS_PER_PAGE);
+  // Filtre par recherche
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredFormations(formations);
+    } else {
+      const query = searchQuery.toLowerCase();
+      setFilteredFormations(
+        formations.filter((f) =>
+          f.title.toLowerCase().includes(query) ||
+          f.description.toLowerCase().includes(query)
+        )
+      );
+    }
+    setCurrentPage(1); // reset page quand on recherche
+  }, [searchQuery, formations]);
+
+  const totalPages = Math.ceil(filteredFormations.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentFormations = formations.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const currentFormations = filteredFormations.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const handlePrev = () => setCurrentPage((p) => Math.max(1, p - 1));
   const handleNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
@@ -66,7 +86,7 @@ export default function FormationsPage() {
       <Navbar />
       <div className="h-16 lg:h-20"></div>
 
-      {/* Hero */}
+      {/* Hero – inchangé */}
       <section className="relative h-[70vh] min-h-[600px] flex items-center justify-center text-center text-white overflow-hidden">
         <Image
           src="/formation-hero.jpg"
@@ -85,12 +105,30 @@ export default function FormationsPage() {
         </div>
       </section>
 
-      {/* Liste des formations */}
+      {/* Barre de recherche – ajoutée ici, centrée, classe et simple */}
+      <section className="py-12 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-900" size={24} />
+              <input
+                type="text"
+                placeholder="Rechercher une formation par titre ou description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-16 pr-8 py-5 text-lg border-2 border-blue-900 rounded-2xl focus:outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 transition bg-white shadow-md"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Liste des formations – inchangée */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
-          {formations.length === 0 ? (
+          {filteredFormations.length === 0 ? (
             <p className="text-center text-2xl text-gray-600 py-20">
-              Aucune formation disponible pour le moment.
+              {searchQuery ? "Aucune formation ne correspond à votre recherche." : "Aucune formation disponible pour le moment."}
             </p>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -126,7 +164,7 @@ export default function FormationsPage() {
             </div>
           )}
 
-          {/* Pagination */}
+          {/* Pagination – inchangée */}
           {totalPages > 1 && (
             <div className="mt-16 flex items-center justify-center gap-4 flex-wrap">
               <button
