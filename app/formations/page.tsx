@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Footer from '@/components/Footer';
-import { Search } from "lucide-react";
+import { Search, Download } from "lucide-react";
 
 interface Formation {
   id: string;
@@ -105,7 +105,24 @@ export default function FormationsPage() {
         </div>
       </section>
 
-      {/* Barre de recherche – ajoutée ici, centrée, classe et simple */}
+      {/* NOUVEAU : Bouton Télécharger le catalogue – simple, classe, moderne */}
+      <section className="py-12 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <a
+            href="/catalogue/catalogues-formations.pdf"
+            download="catalogues-formations.pdf"
+            className="inline-flex items-center gap-4 bg-yellow-500 text-blue-700 font-bold text-xl md:text-2xl px-10 py-6 rounded-2xl shadow-xl hover:bg-yellow-400 hover:shadow-2xl transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300"
+          >
+            <Download className="w-8 h-8 md:w-10 md:h-10 " />
+            Télécharger  le catalogue des formations
+          </a>
+          <p className="mt-4 text-gray-600 text-lg">
+            (Janvier 2026 – Catalogue complet CACEG)
+          </p>
+        </div>
+      </section>
+
+      {/* Barre de recherche – inchangée */}
       <section className="py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-3xl mx-auto">
@@ -137,7 +154,7 @@ export default function FormationsPage() {
                   <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-3 transition-all duration-300 overflow-hidden">
                     <div className="relative h-56">
                       <Image 
-                        src={f.image || "https://via.placeholder.com/600x400?text=Formation+CACEG"} 
+                        src={f.image || "/placeholder-formation.jpg"}  // ← Remplace placeholder par une image locale pour fixer l’erreur DNS
                         alt={f.title} 
                         fill 
                         className="object-cover" 

@@ -101,8 +101,7 @@ export default function Footer() {
       </div>
 
       <div className="mt-12 pt-8 border-t border-blue-800 text-center text-sm text-gray-400">
-        © {new Date().getFullYear()} CACEG. Tous droits réservés. Designed by
-        sefrone
+        © {new Date().getFullYear()} CACEG. Tous droits réservés. 
       </div>
     </footer>
   );
