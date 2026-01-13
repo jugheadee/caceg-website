@@ -59,8 +59,8 @@ export default function ContactPage() {
     <Phone size={36} className="text-blue-900" />
   </div>
   <h3 className="text-2xl font-bold text-blue-900 mb-4">Téléphone</h3>
-  <p className="text-lg text-gray-700 mb-2">+213 (0)23 58 86 76</p>
-  <p className="text-lg text-gray-700">+213 (0)550 177 84</p>
+  <p className="text-lg text-gray-700 mb-2">+213 782 35 86 76</p>
+  <p className="text-lg text-gray-700">+213 550 01 77 84</p>
 </a>
 
 {/* Email – clic ouvre l'app mail */}

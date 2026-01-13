@@ -5,6 +5,15 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import SponsorsCarousel from '@/components/SponsorsCarousel';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  limit,
+  orderBy,
+} from "firebase/firestore"; // Added imports
+import { db } from "@/lib/firebase";
 
 const slides = [
   {
@@ -27,10 +36,23 @@ const slides = [
     title: "VERS LA RÉUSSITE DE VOS PROJETS",
     subtitle: "Un accompagnement complet pour atteindre vos objectifs",
   },
+
 ];
+interface Formation {
+  // Added interface for popular formations
+  id: string;
+  title: string;
+  instructor: string;
+  description: string;
+  price: string;
+  image: string;
+  slug: string;
+  featured?: boolean;
+}
 
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [popularFormations, setPopularFormations] = useState<Formation[]>([]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -38,6 +60,29 @@ export default function Home() {
     }, 6000);
     return () => clearInterval(interval);
   }, []);
+   // Fetch popular formations – Added
+  useEffect(() => {
+    const q = query(
+      collection(db, "formations"),
+      where("featured", "==", true),
+      orderBy("dateCreation", "desc"),
+      limit(4)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(
+        (doc) =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          } as Formation)
+      );
+      setPopularFormations(data);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+
 
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -191,6 +236,60 @@ export default function Home() {
           </div>
         </div>
       </section>
+       {/* New Section: Formations Populaires – Added */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <h2 className="text-4xl font-bold text-center text-blue-900 mb-12">
+            Nos Formations Populaires
+          </h2>
+          {popularFormations.length === 0 ? (
+            <p className="text-center text-2xl text-gray-600 py-20">
+              Aucune formation populaire disponible pour le moment.
+            </p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
+              {popularFormations.map((f) => (
+                <Link
+                  href={`/formations/${f.slug}`}
+                  key={f.id}
+                  className="block"
+                >
+                  <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-3 transition-all duration-300 overflow-hidden">
+                    <div className="relative h-56">
+                      <Image
+                        src={
+                          f.image ||
+                          "https://via.placeholder.com/600x400?text=Formation+CACEG"
+                        }
+                        alt={f.title}
+                        fill
+                        className="object-cover"
+                      />
+                     
+                    </div>
+                    <div className="p-8">
+                      <h3 className="text-xl font-bold text-blue-900 mb-3 line-clamp-2">
+                        {f.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Par {f.instructor || "CACEG"}
+                      </p>
+                      <p className="text-gray-700 line-clamp-3 mb-6">
+                        {f.description}
+                      </p>
+                      <span className="text-blue-900 font-semibold hover:underline flex items-center gap-2">
+                        En savoir plus{" "}
+                        <span className="text-yellow-500">→</span>
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
 
       {/* Témoignages */}
       <section className="py-20 bg-gray-50">
@@ -248,7 +347,7 @@ export default function Home() {
       <section className="py-16 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-center text-blue-900 mb-12">
-            Nos Partenaires et Sponsors
+            Nos Partenaires
           </h2>
           <SponsorsCarousel />
         </div>

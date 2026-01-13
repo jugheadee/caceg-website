@@ -61,10 +61,28 @@ export default function Navbar() {
             </Link>
           </li>
 
-          <li className={`px-4 border-l border-gray-300 ${pathname === "/a-propos" ? activeLinkClass : inactiveLinkClass}`}>
-            <Link href="/a-propos" className="hover:text-amber-600 transition">
-              A propos
+          {/* A PROPOS avec sous-menu déroulant */}
+          <li className="group relative px-4 border-l border-gray-300">
+            <Link
+              href="/a-propos"
+              className={`flex items-center gap-1 hover:text-amber-600 transition ${pathname.startsWith("/a-propos") ? activeLinkClass : inactiveLinkClass}`}
+            >
+              A propos ▼
             </Link>
+            <div className="absolute top-full left-0 mt-2 bg-white shadow-lg border border-gray-200 rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all w-64 py-2 z-50">
+              <Link
+                href="/a-propos/presentation"
+                className="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-100 hover:text-amber-600 transition"
+              >
+                Présentation
+              </Link>
+              <Link
+                href="/a-propos/mot-du-directeur"
+                className="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-100 hover:text-amber-600 transition"
+              >
+                Un mot du directeur
+              </Link>
+            </div>
           </li>
 
           {/* Formations Dropdown DYNAMIQUE – max 4 */}
