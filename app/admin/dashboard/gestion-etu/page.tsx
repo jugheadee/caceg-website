@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   collection,
   onSnapshot,
@@ -20,7 +20,6 @@ import {
   Search,
   Filter,
   X,
-  Check,
   ArrowUpDown,
 } from "lucide-react";
 
@@ -112,76 +111,6 @@ const allColumns = [
   { key: "formation", label: "Formation" },
 ];
 
-// Custom Select Component
-function CustomSelect({
-  options,
-  value,
-  onChange,
-  placeholder,
-}: {
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const selectedLabel =
-    options.find((o) => o.value === value)?.label || placeholder;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full px-6 py-4 pr-12 text-left border-2 border-gray-200 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
-      >
-        <span className={value ? "text-gray-900" : "text-gray-500"}>
-          {selectedLabel}
-        </span>
-        <ChevronDown
-          className={`text-gray-500 transition ${open ? "rotate-180" : ""}`}
-          size={20}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 overflow-hidden">
-          <div className="max-h-64 overflow-y-auto">
-            {options.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                className="w-full px-6 py-3 text-left hover:bg-gray-50 transition flex items-center justify-between"
-              >
-                <span className="text-gray-800">{option.label}</span>
-                {value === option.value && (
-                  <Check size={18} className="text-blue-900" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function GestionEtudiants() {
   const [allEtudiants, setAllEtudiants] = useState<Etudiant[]>([]);
   const [etudiants, setEtudiants] = useState<Etudiant[]>([]);
@@ -194,8 +123,8 @@ export default function GestionEtudiants() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterFormation, setFilterFormation] = useState("");
-  const [filterWilaya, setFilterWilaya] = useState("");
+  const [filterFormations, setFilterFormations] = useState<string[]>([]);
+  const [filterWilayas, setFilterWilayas] = useState<string[]>([]);
 
   const [sortBy, setSortBy] = useState<
     "dateDesc" | "dateAsc" | "nameAsc" | "nameDesc"
@@ -206,6 +135,8 @@ export default function GestionEtudiants() {
   );
 
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+  const [showFormationDropdown, setShowFormationDropdown] = useState(false);
+  const [showWilayaDropdown, setShowWilayaDropdown] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -220,13 +151,6 @@ export default function GestionEtudiants() {
     commune: "",
     dateNaissance: "",
   });
-
-  const getInscriptionDate = (dateInscription: any): Date => {
-    if (!dateInscription) return new Date(0);
-    if (typeof dateInscription === "string") return new Date(dateInscription);
-    if (dateInscription.toDate) return dateInscription.toDate();
-    return new Date(0);
-  };
 
   useEffect(() => {
     const unsubEtudiants = onSnapshot(collection(db, "etudiants"), (snap) => {
@@ -260,21 +184,34 @@ export default function GestionEtudiants() {
       });
     }
 
-    if (filterFormation)
-      filtered = filtered.filter((e) => e.formationId === filterFormation);
-    if (filterWilaya)
-      filtered = filtered.filter((e) => e.wilaya === filterWilaya);
+    if (filterFormations.length > 0) {
+      filtered = filtered.filter((e) =>
+        filterFormations.includes(e.formationId)
+      );
+    }
 
-    filtered.sort((a, b) => {
+    if (filterWilayas.length > 0) {
+      filtered = filtered.filter((e) => filterWilayas.includes(e.wilaya));
+    }
+
+    filtered = [...filtered].sort((a, b) => {
       if (sortBy === "dateDesc")
         return (
-          getInscriptionDate(b.dateInscription).getTime() -
-          getInscriptionDate(a.dateInscription).getTime()
+          new Date(
+            b.dateInscription?.toDate?.() || b.dateInscription || 0
+          ).getTime() -
+          new Date(
+            a.dateInscription?.toDate?.() || a.dateInscription || 0
+          ).getTime()
         );
       if (sortBy === "dateAsc")
         return (
-          getInscriptionDate(a.dateInscription).getTime() -
-          getInscriptionDate(b.dateInscription).getTime()
+          new Date(
+            a.dateInscription?.toDate?.() || a.dateInscription || 0
+          ).getTime() -
+          new Date(
+            b.dateInscription?.toDate?.() || b.dateInscription || 0
+          ).getTime()
         );
       if (sortBy === "nameAsc")
         return `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`);
@@ -285,7 +222,7 @@ export default function GestionEtudiants() {
 
     setEtudiants(filtered);
     setCurrentPage(1);
-  }, [searchQuery, filterFormation, filterWilaya, sortBy, allEtudiants]);
+  }, [searchQuery, filterFormations, filterWilayas, sortBy, allEtudiants]);
 
   const totalPages = Math.ceil(etudiants.length / itemsPerPage);
   const paginatedEtudiants = etudiants.slice(
@@ -314,15 +251,13 @@ export default function GestionEtudiants() {
     return pages;
   };
 
-  // SAFE toggle — prevents hiding the last column
   const toggleColumn = (key: string) => {
     setVisibleColumns((prev) => {
       const isCurrentlyVisible = prev.includes(key);
       const visibleCount = prev.length;
 
-      // Prevent turning off the last column
       if (isCurrentlyVisible && visibleCount === 1) {
-        return prev; // do nothing
+        return prev;
       }
 
       if (isCurrentlyVisible) {
@@ -331,6 +266,20 @@ export default function GestionEtudiants() {
         return [...prev, key];
       }
     });
+  };
+
+  const toggleFormation = (id: string) => {
+    setFilterFormations((prev) =>
+      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
+    );
+  };
+
+  const toggleWilaya = (wilaya: string) => {
+    setFilterWilayas((prev) =>
+      prev.includes(wilaya)
+        ? prev.filter((w) => w !== wilaya)
+        : [...prev, wilaya]
+    );
   };
 
   const handleNameSort = () => {
@@ -486,31 +435,14 @@ export default function GestionEtudiants() {
 
   const resetAllFilters = () => {
     setSearchQuery("");
-    setFilterFormation("");
-    setFilterWilaya("");
+    setFilterFormations([]);
+    setFilterWilayas([]);
     setSortBy("dateDesc");
   };
-
-  const formationFilterOptions = [
-    { value: "", label: "Toutes les formations" },
-    ...formations.map((f) => ({ value: f.id, label: f.title })),
-  ];
-
-  const wilayaFilterOptions = [
-    { value: "", label: "Toutes les wilayas" },
-    ...wilayas.map((w) => ({ value: w, label: w })),
-  ];
-
-  const modalWilayaOptions = wilayas.map((w) => ({ value: w, label: w }));
-  const modalFormationOptions = formations.map((f) => ({
-    value: f.id,
-    label: f.title,
-  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-8 py-10">
-        {/* Header */}
         <div className="flex justify-between items-center mb-10">
           <h1 className="text-4xl font-bold text-blue-900">
             Gestion des Étudiants
@@ -554,7 +486,6 @@ export default function GestionEtudiants() {
           </div>
         </div>
 
-        {/* Main Filters */}
         <div className="bg-white rounded-2xl shadow-md p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="relative">
@@ -571,19 +502,133 @@ export default function GestionEtudiants() {
               />
             </div>
 
-            <CustomSelect
-              options={formationFilterOptions}
-              value={filterFormation}
-              onChange={setFilterFormation}
-              placeholder="Toutes les formations"
-            />
+            {/* Toutes les formations */}
+            <div className="relative inline-block text-left">
+              <button
+                type="button"
+                onClick={() => setShowFormationDropdown(!showFormationDropdown)}
+                className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition whitespace-nowrap min-w-[220px] w-full justify-between"
+              >
+                <span className="truncate">
+                  {filterFormations.length === 0
+                    ? "Toutes les formations"
+                    : `${filterFormations.length} formations`}
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`text-gray-500 transition-transform ${
+                    showFormationDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
-            <CustomSelect
-              options={wilayaFilterOptions}
-              value={filterWilaya}
-              onChange={setFilterWilaya}
-              placeholder="Toutes les wilayas"
-            />
+              {showFormationDropdown && (
+                <div
+                  className="
+                    absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30
+                  "
+                >
+                  <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                    {formations.map((f) => (
+                      <label
+                        key={f.id}
+                        className="flex items-center px-5 py-3.5 hover:bg-blue-50/50 cursor-pointer transition-colors select-none group"
+                      >
+                        <div className="relative flex h-5 w-5 items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={filterFormations.includes(f.id)}
+                            onChange={() => toggleFormation(f.id)}
+                            className="peer h-5 w-5 appearance-none rounded-md border-2 border-gray-300 bg-white checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors group-hover:border-blue-400"
+                          />
+                          {/* White checkmark when checked */}
+                          <svg
+                            className="pointer-events-none absolute h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth="3"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-gray-700 font-medium group-hover:text-blue-700 transition-colors">
+                          {f.title}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Toutes les wilayas */}
+            <div className="relative inline-block text-left">
+              <button
+                type="button"
+                onClick={() => setShowWilayaDropdown(!showWilayaDropdown)}
+                className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition whitespace-nowrap min-w-[220px] w-full justify-between"
+              >
+                <span className="truncate">
+                  {filterWilayas.length === 0
+                    ? "Toutes les wilayas"
+                    : `${filterWilayas.length} wilayas`}
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`text-gray-500 transition-transform ${
+                    showWilayaDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {showWilayaDropdown && (
+                <div
+                  className="
+                    absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30
+                  "
+                >
+                  <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                    {wilayas.map((w) => (
+                      <label
+                        key={w}
+                        className="flex items-center px-5 py-3.5 hover:bg-blue-50/50 cursor-pointer transition-colors select-none group"
+                      >
+                        <div className="relative flex h-5 w-5 items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={filterWilayas.includes(w)}
+                            onChange={() => toggleWilaya(w)}
+                            className="peer h-5 w-5 appearance-none rounded-md border-2 border-gray-300 bg-white checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors group-hover:border-blue-400"
+                          />
+                          {/* White checkmark when checked */}
+                          <svg
+                            className="pointer-events-none absolute h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth="3"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-gray-700 font-medium group-hover:text-blue-700 transition-colors">
+                          {w}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <button
               onClick={resetAllFilters}
@@ -595,58 +640,79 @@ export default function GestionEtudiants() {
           </div>
         </div>
 
-        {/* Table Card */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="flex justify-between items-center p-6 border-b border-gray-100">
             <div className="flex items-center gap-6">
               <span className="text-gray-600 font-medium">
                 Étudiants Summary ({etudiants.length})
               </span>
-              <div className="relative z-50">
+
+              <div className="relative inline-block text-left">
                 <button
+                  type="button"
                   onClick={() => setShowColumnDropdown(!showColumnDropdown)}
-                  className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition whitespace-nowrap"
+                  className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition whitespace-nowrap min-w-[220px]"
                 >
                   <Filter size={18} />
                   Afficher les colonnes
                   <ChevronDown
                     size={18}
-                    className={`transition ${
+                    className={`text-gray-500 transition-transform ${
                       showColumnDropdown ? "rotate-180" : ""
                     }`}
                   />
                 </button>
 
                 {showColumnDropdown && (
-                  <div className="absolute left-0 top-full mt-3 min-w-full bg-white rounded-2xl shadow-2xl border border-gray-200 py-4 z-[9999]">
-                    <div className="px-6 pb-3 border-b border-gray-100">
-                      <p className="text-sm font-semibold text-gray-700">
-                        Colonnes visibles
-                      </p>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
+                  <div
+                    className="
+                      absolute
+                      right-0
+                      top-full
+                      mt-2
+                      w-full
+                      min-w-[220px]
+                      bg-white
+                      rounded-xl
+                      shadow-2xl
+                      border border-gray-200
+                      overflow-hidden
+                      z-30
+                    "
+                  >
+                    <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
                       {allColumns.map((col) => (
                         <label
                           key={col.key}
-                          className="flex items-center gap-4 px-6 py-3 hover:bg-gray-50 cursor-pointer"
+                          className="flex items-center px-5 py-3.5 hover:bg-blue-50/50 cursor-pointer transition-colors select-none group"
                         >
-                          <input
-                            type="checkbox"
-                            checked={visibleColumns.includes(col.key)}
-                            onChange={() => toggleColumn(col.key)}
-                            className="w-5 h-5 text-blue-900 rounded focus:ring-blue-900"
-                          />
-                          <span className="text-gray-700 font-medium">
+                          <div className="relative flex h-5 w-5 items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={visibleColumns.includes(col.key)}
+                              onChange={() => toggleColumn(col.key)}
+                              className="peer h-5 w-5 appearance-none rounded-md border-2 border-gray-300 bg-white checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors group-hover:border-blue-400"
+                            />
+                            <svg
+                              className="pointer-events-none absolute h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              strokeWidth="3"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          </div>
+                          <span className="ml-3 text-gray-700 font-medium group-hover:text-blue-700 transition-colors">
                             {col.label}
                           </span>
                         </label>
                       ))}
                     </div>
-                    {visibleColumns.length === 0 && (
-                      <div className="px-6 pt-3 text-sm text-gray-500 italic text-center">
-                        Aucune colonne visible — cochez-en au moins une
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -841,7 +907,6 @@ export default function GestionEtudiants() {
           </table>
         </div>
 
-        {/* Add/Edit Modal */}
         {showModal && (
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
@@ -897,15 +962,21 @@ export default function GestionEtudiants() {
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <CustomSelect
-                    options={[
-                      { value: "", label: "Choisir une wilaya *" },
-                      ...modalWilayaOptions,
-                    ]}
-                    value={formData.wilaya}
-                    onChange={(v) => setFormData({ ...formData, wilaya: v })}
-                    placeholder="Choisir une wilaya *"
-                  />
+                  <div className="relative inline-block text-left w-full">
+                    <button
+                      type="button"
+                      className="w-full px-6 py-4 pr-12 text-left border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
+                    >
+                      <span
+                        className={
+                          formData.wilaya ? "text-gray-900" : "text-gray-500"
+                        }
+                      >
+                        {formData.wilaya || "Choisir une wilaya *"}
+                      </span>
+                      <ChevronDown className="text-gray-500" size={20} />
+                    </button>
+                  </div>
                   <input
                     type="text"
                     placeholder="Commune"
@@ -938,15 +1009,21 @@ export default function GestionEtudiants() {
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                 />
 
-                <CustomSelect
-                  options={[
-                    { value: "", label: "Choisir une formation *" },
-                    ...modalFormationOptions,
-                  ]}
-                  value={formData.formationId}
-                  onChange={(v) => setFormData({ ...formData, formationId: v })}
-                  placeholder="Choisir une formation *"
-                />
+                <div className="relative inline-block text-left w-full">
+                  <button
+                    type="button"
+                    className="w-full px-6 py-4 pr-12 text-left border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
+                  >
+                    <span
+                      className={
+                        formData.formationId ? "text-gray-900" : "text-gray-500"
+                      }
+                    >
+                      {formData.formationId || "Choisir une formation *"}
+                    </span>
+                    <ChevronDown className="text-gray-500" size={20} />
+                  </button>
+                </div>
 
                 <div className="flex gap-6 pt-6">
                   <button
@@ -968,7 +1045,6 @@ export default function GestionEtudiants() {
           </div>
         )}
 
-        {/* Confirm Delete Popup */}
         {showConfirmDelete && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">

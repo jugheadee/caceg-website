@@ -2,11 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { collection, query, where, getDocs, addDoc } from "firebase/firestore"; // ← addDoc ajouté
+import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Image from "next/image";
 import Navbar from "@/components/NavBar";
 import Footer from "@/components/Footer";
+
+const wilayas = [
+  "Adrar", "Chlef", "Laghouat", "Oum El Bouaghi", "Batna", "Béjaïa", "Biskra", "Béchar", "Blida", "Bouira",
+  "Tamanrasset", "Tébessa", "Tlemcen", "Tiaret", "Tizi Ouzou", "Alger", "Djelfa", "Jijel", "Sétif", "Saïda",
+  "Skikda", "Sidi Bel Abbès", "Annaba", "Guelma", "Constantine", "Médéa", "Mostaganem", "M'Sila", "Mascara",
+  "Ouargla", "Oran", "El Bayadh", "Illizi", "Bordj Bou Arreridj", "Boumerdès", "El Tarf", "Tindouf", "Tissemsilt",
+  "El Oued", "Khenchela", "Souk Ahras", "Tipaza", "Mila", "Aïn Defla", "Naâma", "Aïn Témouchent", "Ghardaïa",
+  "Relizane", "Timimoun", "Bordj Badji Mokhtar", "Ouled Djellal", "Béni Abbès", "In Salah", "In Guezzam",
+  "Touggourt", "Djanet", "El M'Ghair", "El Meniaa",
+];
 
 interface Formation {
   id: string;
@@ -38,6 +48,13 @@ export default function FormationDetail() {
     email: '',
     telephone: '',
     wilaya: '',
+    dateNaissance: '',
+  });
+
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({
+    show: false,
+    message: "",
+    type: "success",
   });
 
   useEffect(() => {
@@ -73,18 +90,29 @@ export default function FormationDetail() {
         prenom: formData.prenom.trim(),
         email: formData.email.trim(),
         telephone: formData.telephone.trim(),
-        wilaya: formData.wilaya.trim(),
+        wilaya: formData.wilaya,
+        dateNaissance: formData.dateNaissance,
         date: new Date().toISOString(),
       });
 
-      alert(`Merci ${formData.prenom} ${formData.nom} !\nVotre demande d'inscription à "${formation?.title}" a été envoyée avec succès.\nNous vous contacterons très bientôt.`);
+      setToast({ show: true, message: "Votre candidature a bien été envoyée ! Nous vous contacterons très bientôt.", type: "success" });
+
       setShowInscription(false);
-      setFormData({ nom: '', prenom: '', email: '', telephone: '', wilaya: '' });
+      setFormData({ nom: '', prenom: '', email: '', telephone: '', wilaya: '', dateNaissance: '' });
     } catch (error) {
       console.error("Erreur envoi inscription:", error);
-      alert("Erreur lors de l'envoi. Veuillez réessayer.");
+      setToast({ show: true, message: "Erreur lors de l'envoi. Veuillez réessayer.", type: "error" });
     }
   };
+
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast({ ...toast, show: false });
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
 
   if (loading) {
     return (
@@ -104,13 +132,12 @@ export default function FormationDetail() {
 
   return (
     <>
-      {/* Navbar */}
       <Navbar />
 
-      {/* Hero */}
+      {/* Hero avec image locale fallback */}
       <section className="relative h-96 md:h-[500px] overflow-hidden">
         <Image
-          src={formation.image || "https://via.placeholder.com/1920x600?text=Formation+CACEG"}
+          src={formation.image || "/images/placeholder-formation.jpg"}  // ← IMAGE LOCALE DANS public/images/
           alt={formation.title}
           fill
           className="object-cover"
@@ -130,7 +157,7 @@ export default function FormationDetail() {
         </div>
       </section>
 
-      {/* Bouton Retour – haut gauche */}
+      {/* Bouton Retour */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <button
           onClick={() => router.back()}
@@ -193,7 +220,7 @@ export default function FormationDetail() {
               </div>
             )}
 
-            {/* Bouton inscription centré */}
+            {/* Bouton inscription */}
             <div className="text-center pt-8">
               <button
                 onClick={() => setShowInscription(true)}
@@ -206,13 +233,12 @@ export default function FormationDetail() {
         </div>
       </section>
 
-      {/* Footer */}
       <Footer />
 
       {/* Modal Inscription */}
       {showInscription && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowInscription(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-2xl w-full mx-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-2xl w-full mx-6 overflow-y-auto max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-3xl font-bold text-blue-900 mb-6 text-center">
               Demande d'inscription
             </h2>
@@ -224,9 +250,33 @@ export default function FormationDetail() {
                 <input type="text" placeholder="Nom *" required value={formData.nom} onChange={(e) => setFormData({...formData, nom: e.target.value})} className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
                 <input type="text" placeholder="Prénom *" required value={formData.prenom} onChange={(e) => setFormData({...formData, prenom: e.target.value})} className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
               </div>
+
               <input type="email" placeholder="Email *" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
+
               <input type="tel" placeholder="Téléphone *" required value={formData.telephone} onChange={(e) => setFormData({...formData, telephone: e.target.value})} className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
-              <input type="text" placeholder="Wilaya *" required value={formData.wilaya} onChange={(e) => setFormData({...formData, wilaya: e.target.value})} className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
+
+              <input
+                type="date"
+                required
+                value={formData.dateNaissance}
+                onChange={(e) => setFormData({ ...formData, dateNaissance: e.target.value })}
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+              />
+
+              <select
+                required
+                value={formData.wilaya}
+                onChange={(e) => setFormData({ ...formData, wilaya: e.target.value })}
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition bg-white"
+              >
+                <option value="">Choisir une wilaya *</option>
+                {wilayas.map((wilaya) => (
+                  <option key={wilaya} value={wilaya}>
+                    {wilaya}
+                  </option>
+                ))}
+              </select>
+
               <div className="flex gap-6 pt-8">
                 <button type="submit" className="flex-1 bg-yellow-500 text-blue-900 font-bold py-5 rounded-xl hover:bg-yellow-400 transition text-xl">
                   Envoyer ma demande
@@ -239,6 +289,18 @@ export default function FormationDetail() {
           </div>
         </div>
       )}
+
+      {/* Toast avec fade-in/out + icône ✓ */}
+      <div className="fixed inset-x-0 bottom-8 z-50 flex justify-center pointer-events-none">
+        <div className={`transition-all duration-500 ease-in-out ${
+          toast.show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        }`}>
+          <div className="flex items-center gap-4 px-8 py-5 rounded-2xl shadow-2xl bg-green-600 text-white font-medium text-lg">
+            <span className="text-3xl">✓</span>
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
