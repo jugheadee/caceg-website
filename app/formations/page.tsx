@@ -14,7 +14,6 @@ interface Formation {
   title: string;
   instructor: string;
   description: string;
-  price: string;
   image: string;
   slug: string;
 }
@@ -114,7 +113,7 @@ export default function FormationsPage() {
             className="inline-flex items-center gap-4 bg-yellow-500 text-blue-700 font-bold text-xl md:text-2xl px-10 py-6 rounded-2xl shadow-xl hover:bg-yellow-400 hover:shadow-2xl transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300"
           >
             <Download className="w-8 h-8 md:w-10 md:h-10 " />
-            Télécharger  le catalogue des formations
+            Télécharger git le catalogue des formations
           </a>
           <p className="mt-4 text-gray-600 text-lg">
             (Janvier 2026 – Catalogue complet CACEG)
@@ -159,13 +158,7 @@ export default function FormationsPage() {
                         fill 
                         className="object-cover" 
                       />
-                      <span
-                        className={`absolute top-4 right-4 px-4 py-2 rounded-full font-bold text-sm ${
-                          f.price === "Gratuit" ? 'bg-yellow-500 text-blue-900' : 'bg-green-600 text-white'
-                        }`}
-                      >
-                        {f.price}
-                      </span>
+                    
                     </div>
                     <div className="p-8">
                       <h3 className="text-xl font-bold text-blue-900 mb-3 line-clamp-2">{f.title}</h3>

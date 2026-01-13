@@ -150,9 +150,7 @@ export default function FormationDetail() {
           <div className="flex flex-wrap gap-6 items-center">
             {formation.duration && <span className="bg-white/20 backdrop-blur px-6 py-3 rounded-full text-lg">Durée : {formation.duration}</span>}
             {formation.coursesCount && <span className="bg-white/20 backdrop-blur px-6 py-3 rounded-full text-lg">{formation.coursesCount} modules</span>}
-            <span className={`px-8 py-4 rounded-full text-xl font-bold ${formation.price === "Gratuit" ? "bg-yellow-500 text-blue-900" : "bg-green-600 text-white"}`}>
-              {formation.price}
-            </span>
+           
           </div>
         </div>
       </section>
