@@ -12,8 +12,9 @@ import {
   onSnapshot,
   limit,
   orderBy,
-} from "firebase/firestore"; // Added imports
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { ChevronRight } from "lucide-react";
 
 const slides = [
   {
@@ -36,10 +37,9 @@ const slides = [
     title: "VERS LA RÉUSSITE DE VOS PROJETS",
     subtitle: "Un accompagnement complet pour atteindre vos objectifs",
   },
-
 ];
+
 interface Formation {
-  // Added interface for popular formations
   id: string;
   title: string;
   instructor: string;
@@ -60,14 +60,16 @@ export default function Home() {
     }, 6000);
     return () => clearInterval(interval);
   }, []);
-   // Fetch popular formations – Added
+
+  // Fetch popular formations – MODIFIÉ : limit(6) au lieu de 4
   useEffect(() => {
     const q = query(
       collection(db, "formations"),
       where("featured", "==", true),
       orderBy("dateCreation", "desc"),
-      limit(4)
+      limit(6)  // ← CHANGEMENT : max 6 formations populaires
     );
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(
         (doc) =>
@@ -82,8 +84,6 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-
-
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
 
@@ -91,74 +91,71 @@ export default function Home() {
     <main className="min-h-screen bg-white">
       <Navbar />
 
-      {/* HERO SLIDER CLASSE ET MODERNE */}
-     <section className="relative h-[70vh] min-h-[500px] overflow-hidden group"> {/* group pour hover global */}
-  {slides.map((slide, index) => (
-    <div
-      key={index}
-      className={`absolute inset-0 transition-all duration-1500 ease-in-out ${
-        index === currentSlide ? "opacity-100 scale-100" : "opacity-0 scale-105"
-      }`}
-    >
-      <Image
-        src={slide.image}
-        alt={`CACEG Hero ${index + 1}`}
-        fill
-        className="object-cover"
-        priority={index === 0}
-      />
-      {/* Overlay gradient élégant */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-      <div className="relative h-full flex items-center justify-center text-center text-white px-6">
-        <div className={`max-w-5xl transition-all duration-1000 delay-300 ${
-          index === currentSlide ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        }`}>
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 drop-shadow-2xl">
-            {slide.title}
-          </h1>
-          <p className="text-xl md:text-3xl mb-10 drop-shadow-lg">
-            {slide.subtitle}
-          </p>
-          <Link
-            href="/contact"
-            className="inline-block bg-yellow-500 text-blue-900 font-bold px-10 py-5 rounded-full text-xl hover:bg-yellow-400 hover:shadow-2xl transition-all duration-500"
+      {/* HERO SLIDER */}
+      <section className="relative h-[70vh] min-h-[500px] overflow-hidden group">
+        {slides.map((slide, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-all duration-1500 ease-in-out ${
+              index === currentSlide ? "opacity-100 scale-100" : "opacity-0 scale-105"
+            }`}
           >
-            EN SAVOIR PLUS
-          </Link>
+            <Image
+              src={slide.image}
+              alt={`CACEG Hero ${index + 1}`}
+              fill
+              className="object-cover"
+              priority={index === 0}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+            <div className="relative h-full flex items-center justify-center text-center text-white px-6">
+              <div className={`max-w-5xl transition-all duration-1000 delay-300 ${
+                index === currentSlide ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+              }`}>
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 drop-shadow-2xl">
+                  {slide.title}
+                </h1>
+                <p className="text-xl md:text-3xl mb-10 drop-shadow-lg">
+                  {slide.subtitle}
+                </p>
+                <Link
+                  href="/contact"
+                  className="inline-block bg-yellow-500 text-blue-900 font-bold px-10 py-5 rounded-full text-xl hover:bg-yellow-400 hover:shadow-2xl transition-all duration-500"
+                >
+                  EN SAVOIR PLUS
+                </Link>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <button
+          onClick={prevSlide}
+          className="absolute left-8 top-1/2 -translate-y-1/2 z-20 text-white text-5xl opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 transition-all duration-700"
+          aria-label="Slide précédent"
+        >
+          ‹
+        </button>
+        <button
+          onClick={nextSlide}
+          className="absolute right-8 top-1/2 -translate-y-1/2 z-20 text-white text-5xl opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 transition-all duration-700"
+          aria-label="Slide suivant"
+        >
+          ›
+        </button>
+
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all duration-500 ${
+                index === currentSlide ? "bg-yellow-500 w-12" : "bg-white/70"
+              } hover:bg-yellow-400`}
+            />
+          ))}
         </div>
-      </div>
-    </div>
-  ))}
-
-  {/* Flèches – apparaissent en fade + scale au hover */}
-  <button
-    onClick={prevSlide}
-    className="absolute left-8 top-1/2 -translate-y-1/2 z-20 text-white text-5xl opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 transition-all duration-700"
-    aria-label="Slide précédent"
-  >
-    ‹
-  </button>
-  <button
-    onClick={nextSlide}
-    className="absolute right-8 top-1/2 -translate-y-1/2 z-20 text-white text-5xl opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 transition-all duration-700"
-    aria-label="Slide suivant"
-  >
-    ›
-  </button>
-
-  {/* Points indicateurs – apparaissent en fade au hover */}
-  <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-    {slides.map((_, index) => (
-      <button
-        key={index}
-        onClick={() => setCurrentSlide(index)}
-        className={`w-3 h-3 rounded-full transition-all duration-500 ${
-          index === currentSlide ? "bg-yellow-500 w-12" : "bg-white/70"
-        } hover:bg-yellow-400`}
-      />
-    ))}
-  </div>
-</section>
+      </section>
 
       {/* Une formation réussie... */}
       <section className="py-20 bg-gray-50">
@@ -223,7 +220,7 @@ export default function Home() {
               height={400}
               className="rounded-xl shadow-xl mb-8 mx-auto md:mx-0"
             />
-            <h2 className="text-3xl font-bold text-blue-900 mb-6">CACEG Consulting</h2>
+            <h2 className="text-3xl font-bold text-blue-900 mb-6">CACEG Conseil et Etude</h2>
             <p className="text-gray-700 mb-8 text-lg">
               Nous avons pour mission d'accompagner les entreprises dans leurs projets d'évolution et de développement afin de les propulser vers la réussite de leurs objectifs de performance.
             </p>
@@ -236,25 +233,27 @@ export default function Home() {
           </div>
         </div>
       </section>
-       {/* New Section: Formations Populaires – Added */}
+
+      {/* Formations Populaires  */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-center text-blue-900 mb-12">
             Nos Formations Populaires
           </h2>
+
           {popularFormations.length === 0 ? (
             <p className="text-center text-2xl text-gray-600 py-20">
               Aucune formation populaire disponible pour le moment.
             </p>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"> {/* ← CHANGEMENT : lg:grid-cols-3 (3 par ligne) */}
               {popularFormations.map((f) => (
                 <Link
                   href={`/formations/${f.slug}`}
                   key={f.id}
                   className="block"
                 >
-                  <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-3 transition-all duration-300 overflow-hidden">
+                  <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-3 transition-all duration-300 overflow-hidden h-full flex flex-col">
                     <div className="relative h-56">
                       <Image
                         src={
@@ -265,21 +264,14 @@ export default function Home() {
                         fill
                         className="object-cover"
                       />
-                     
                     </div>
-                    <div className="p-8">
+                    <div className="p-8 flex flex-col flex-grow">
                       <h3 className="text-xl font-bold text-blue-900 mb-3 line-clamp-2">
                         {f.title}
                       </h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Par {f.instructor || "CACEG"}
-                      </p>
-                      <p className="text-gray-700 line-clamp-3 mb-6">
-                        {f.description}
-                      </p>
-                      <span className="text-blue-900 font-semibold hover:underline flex items-center gap-2">
-                        En savoir plus{" "}
-                        <span className="text-yellow-500">→</span>
+                    
+                      <span className="text-blue-900 font-semibold hover:underline flex items-center gap-2 mt-auto">
+                        En savoir plus <span className="text-yellow-500">→</span>
                       </span>
                     </div>
                   </div>
@@ -290,64 +282,11 @@ export default function Home() {
         </div>
       </section>
 
-
-      {/* Témoignages */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-4xl font-bold text-center text-blue-900 mb-12">
-            Ce que disent nos clients
-          </h2>
-          <div className="grid md:grid-cols-2 gap-12">
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <p className="text-gray-700 italic mb-6">
-                "J'ai vraiment apprécié les cours de CACEG et j'espère pouvoir suivre d'autres formations avec eux. Les explications sont claires ainsi que les exemples sont bien présentés et faciles à suivre."
-              </p>
-              <p className="font-semibold text-blue-900">Mohamed</p>
-              <p className="text-sm text-gray-600">Développeur Web</p>
-            </div>
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <p className="text-gray-700 italic mb-6">
-                "Les cours ici ont dépassé mes attentes à bien des égards. L'approche pédagogique est claire et structurée. Dans un environnement très calme, j'ai appris les principes clés du design que je peux mettre en œuvre immédiatement."
-              </p>
-              <p className="font-semibold text-blue-900">Rafik Ziani</p>
-              <p className="text-sm text-gray-600">Infographie</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter */}
-      <section className="py-24 bg-blue-950 text-white">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-8">
-            Abonnez-vous à notre newsletter
-          </h2>
-          <p className="text-xl text-blue-200 mb-12 max-w-2xl mx-auto">
-            Recevez en exclusivité nos actualités, nouvelles formations et conseils en management & consulting.
-          </p>
-
-          <form className="flex flex-col md:flex-row gap-6 max-w-2xl mx-auto items-center justify-center">
-            <input
-              type="email"
-              placeholder="Votre adresse email"
-              required
-              className="w-full px-8 py-5 text-lg text-gray-900 placeholder-gray-500 bg-white rounded-full focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-opacity-50 transition-shadow shadow-lg"
-            />
-            <button
-              type="submit"
-              className="w-full md:w-auto bg-yellow-500 text-blue-950 font-bold px-12 py-5 rounded-full text-lg hover:bg-yellow-400 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-            >
-              S'abonner
-            </button>
-          </form>
-        </div>
-      </section>
-
       {/* Sponsors */}
       <section className="py-16 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-center text-blue-900 mb-12">
-            Nos Partenaires
+            Nos Clients
           </h2>
           <SponsorsCarousel />
         </div>

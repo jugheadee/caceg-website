@@ -55,7 +55,7 @@ const allColumns = [
   { key: "dateCreation", label: "Date création" },
 ];
 
-const MAX_FEATURED = 4;
+const MAX_FEATURED = 6;
 
 function CustomSelect({
   options,
