@@ -39,6 +39,7 @@ interface Formation {
   prerequisites?: string;
   targetAudience?: string;
   dateCreation: any;
+  featured?: boolean; // Added for popular formations on home
 }
 
 const allColumns = [
@@ -47,6 +48,7 @@ const allColumns = [
   { key: "duration", label: "Durée" },
   { key: "coursesCount", label: "Modules" },
   { key: "price", label: "Prix" },
+  { key: "featured", label: "Populaire (Accueil)" }, // Added column
   { key: "dateCreation", label: "Date création" },
 ];
 
@@ -171,6 +173,7 @@ export default function GestionFormations() {
     objectives: "",
     prerequisites: "",
     targetAudience: "",
+    featured: false, // Added
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -387,6 +390,7 @@ export default function GestionFormations() {
       objectives: formData.objectives?.trim() || "",
       prerequisites: formData.prerequisites?.trim() || "",
       targetAudience: formData.targetAudience?.trim() || "",
+      featured: formData.featured, // Added
       dateCreation: new Date().toISOString(),
     };
 
@@ -417,6 +421,7 @@ export default function GestionFormations() {
       objectives: formation.objectives || "",
       prerequisites: formation.prerequisites || "",
       targetAudience: formation.targetAudience || "",
+      featured: formation.featured || false, // Added
     });
     setPreviewImage(formation.image || null);
     setSelectedFile(null);
@@ -478,6 +483,7 @@ export default function GestionFormations() {
       objectives: "",
       prerequisites: "",
       targetAudience: "",
+      featured: false,
     });
   };
 
@@ -498,371 +504,234 @@ export default function GestionFormations() {
       "Durée",
       "Modules",
       "Prix",
+      "Populaire",
       "Date création",
     ];
     const rows = formations.map((f) => [
       f.title,
       f.instructor,
-      f.duration || "-",
-      f.coursesCount || "-",
+      f.duration || "",
+      f.coursesCount || "",
       f.price,
+      f.featured ? "Oui" : "Non",
       f.dateCreation
         ? new Date(f.dateCreation).toLocaleDateString("fr-DZ")
-        : "Invalid Date",
+        : "",
     ]);
-
-    const csvContent = [headers, ...rows]
-      .map((row) => row.join(","))
-      .join("\n");
-    const blob = new Blob([`\uFEFF${csvContent}`], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "formations_caceg.csv");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "formations.csv");
+    document.body.appendChild(link);
     link.click();
-  };
-
-  const resetAllFilters = () => {
-    setSearchQuery("");
-    setFilterInstructor("");
-    setFilterFree(false);
-    setPriceMin("");
-    setPriceMax("");
-    setAppliedPriceMin(null);
-    setAppliedPriceMax(null);
-    setSortBy("dateDesc");
+    document.body.removeChild(link);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-8 py-10">
-        <div className="flex justify-between items-center mb-10">
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        {/* Toolbar */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-12">
           <h1 className="text-4xl font-bold text-blue-900">
             Gestion des Formations
           </h1>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4 w-full lg:w-auto">
             <button
               onClick={() => setShowModal(true)}
-              className="bg-yellow-500 text-blue-900 font-bold px-8 py-4 rounded-xl hover:bg-yellow-400 transition shadow-lg flex items-center gap-3"
+              className="flex items-center gap-2 bg-yellow-500 text-blue-900 font-bold px-6 py-3 rounded-xl hover:bg-yellow-400 transition"
             >
-              <Plus size={24} />
-              Ajouter une formation
+              <Plus size={20} />
+              Nouvelle formation
             </button>
-
+            <button
+              onClick={exportToCSV}
+              className="flex items-center gap-2 bg-green-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-green-500 transition"
+            >
+              <Download size={20} />
+              Exporter CSV
+            </button>
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className="flex items-center gap-2 bg-blue-900 text-white font-bold px-6 py-3 rounded-xl hover:bg-blue-800 transition"
+            >
+              <Edit size={20} />
+              {editMode ? "Quitter mode édition" : "Mode édition"}
+            </button>
             {editMode && selectedIds.size > 0 && (
               <button
                 onClick={handleBatchDelete}
-                className="bg-red-600 text-white font-bold px-8 py-4 rounded-xl hover:bg-red-700 transition shadow-lg"
+                className="flex items-center gap-2 bg-red-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-red-500 transition"
               >
+                <X size={20} />
                 Supprimer ({selectedIds.size})
-              </button>
-            )}
-
-            {!editMode ? (
-              <button
-                onClick={() => setEditMode(true)}
-                className="bg-blue-900 text-white font-bold px-8 py-4 rounded-xl hover:bg-blue-800 transition shadow-lg"
-              >
-                Éditer
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setEditMode(false);
-                  setSelectedIds(new Set());
-                }}
-                className="bg-gray-300 text-gray-800 font-bold px-8 py-4 rounded-xl hover:bg-gray-400 transition"
-              >
-                Annuler
               </button>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Filtres */}
+        <div className="bg-white rounded-3xl shadow-xl p-6 mb-12 space-y-6 lg:space-y-0 lg:flex lg:items-end lg:gap-6">
+          {/* Recherche */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Recherche par titre
+            </label>
             <div className="relative">
               <Search
-                className="absolute left-4 top-4 text-gray-400"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
                 size={20}
               />
               <input
                 type="text"
-                placeholder="Rechercher par titre..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
+                placeholder="Rechercher..."
+                className="w-full pl-12 pr-6 py-4 border-2 border-gray-200 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
               />
             </div>
+          </div>
 
+          {/* Instructeur */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Instructeur
+            </label>
             <CustomSelect
               options={getInstructorOptions()}
               value={filterInstructor}
               onChange={setFilterInstructor}
               placeholder="Tous les instructeurs"
             />
+          </div>
 
-            {/* Prix Filter - Tous / Gratuit / Plage */}
-            <div className="relative inline-block text-left">
-              <button
-                type="button"
-                onClick={() => setShowPriceDropdown(!showPriceDropdown)}
-                className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition whitespace-nowrap min-w-[220px] w-full justify-between"
-              >
-                <span className="truncate">
-                  {filterFree
-                    ? "Gratuit"
-                    : appliedPriceMin === null && appliedPriceMax === null
-                    ? "Tous les prix"
-                    : `Prix : ${appliedPriceMin ?? ""} – ${
-                        appliedPriceMax ?? ""
-                      }`}
-                </span>
-                <ChevronDown
-                  size={18}
-                  className={`text-gray-500 transition-transform ${
-                    showPriceDropdown ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {showPriceDropdown && (
-                <div
-                  className="
-                    absolute right-0 top-full mt-2 w-full min-w-[320px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50
-                  "
-                >
-                  <div className="p-5 space-y-4">
-                    {/* Tous les prix */}
-                    <button
-                      onClick={selectAllPrices}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg flex items-center justify-between transition font-medium"
-                    >
-                      Tous les prix
-                      {!filterFree &&
-                        appliedPriceMin === null &&
-                        appliedPriceMax === null && (
-                          <Check size={18} className="text-blue-600" />
-                        )}
-                    </button>
-
-                    {/* Gratuit */}
-                    <button
-                      onClick={selectFree}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg flex items-center justify-between transition font-medium"
-                    >
-                      Gratuit
-                      {filterFree && (
-                        <Check size={18} className="text-blue-600" />
-                      )}
-                    </button>
-
-                    {/* Plage personnalisée */}
-                    <div className="pt-3 border-t border-gray-100">
-                      <div className="text-sm font-medium text-gray-700 mb-3">
-                        Plage personnalisée
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 mb-5">
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">
-                            Minimum
-                          </label>
-                          <input
-                            type="number"
-                            value={priceMin}
-                            onChange={(e) => setPriceMin(e.target.value)}
-                            placeholder="0"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">
-                            Maximum
-                          </label>
-                          <input
-                            type="number"
-                            value={priceMax}
-                            onChange={(e) => setPriceMax(e.target.value)}
-                            placeholder="Aucun"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 transition"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => setShowPriceDropdown(false)}
-                          className="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-lg hover:bg-gray-300 transition font-medium"
-                        >
-                          Annuler
-                        </button>
-                        <button
-                          onClick={applyPriceRange}
-                          className="flex-1 bg-blue-900 text-white py-2.5 rounded-lg hover:bg-blue-800 transition font-medium"
-                        >
-                          Appliquer
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
+          {/* Prix */}
+          <div className="relative flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Prix
+            </label>
             <button
-              onClick={resetAllFilters}
-              className="bg-blue-900 text-white font-bold px-8 py-4 rounded-xl hover:bg-blue-800 transition shadow-md flex items-center justify-center gap-2"
+              type="button"
+              onClick={() => setShowPriceDropdown(!showPriceDropdown)}
+              className="w-full px-6 py-4 text-left border-2 border-gray-200 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
             >
-              <Filter size={20} />
-              Réinitialiser
+              <span className="text-gray-500">
+                {filterFree
+                  ? "Gratuit uniquement"
+                  : appliedPriceMin || appliedPriceMax
+                  ? `${appliedPriceMin || "0"} - ${appliedPriceMax || "∞"} DA`
+                  : "Tous les prix"}
+              </span>
+              <ChevronDown
+                className={`text-gray-500 transition ${
+                  showPriceDropdown ? "rotate-180" : ""
+                }`}
+                size={20}
+              />
             </button>
+
+            {showPriceDropdown && (
+              <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-2xl border border-gray-200 z-50 p-6 space-y-6">
+                <button
+                  type="button"
+                  onClick={selectAllPrices}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-lg flex items-center justify-between"
+                >
+                  Tous les prix
+                  {!filterFree &&
+                    appliedPriceMin === null &&
+                    appliedPriceMax === null && (
+                      <Check size={18} className="text-blue-900" />
+                    )}
+                </button>
+                <button
+                  type="button"
+                  onClick={selectFree}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-lg flex items-center justify-between"
+                >
+                  Gratuit uniquement
+                  {filterFree && <Check size={18} className="text-blue-900" />}
+                </button>
+                <div className="space-y-4">
+                  <p className="font-medium text-gray-700">Plage de prix</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      value={priceMin}
+                      onChange={(e) => setPriceMin(e.target.value)}
+                      className="px-4 py-3 border border-gray-200 rounded-lg focus:border-yellow-500 outline-none"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      value={priceMax}
+                      onChange={(e) => setPriceMax(e.target.value)}
+                      className="px-4 py-3 border border-gray-200 rounded-lg focus:border-yellow-500 outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={applyPriceRange}
+                    className="w-full bg-yellow-500 text-blue-900 font-bold py-3 rounded-lg hover:bg-yellow-400 transition"
+                  >
+                    Appliquer
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Colonnes */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Colonnes
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowColumnDropdown(!showColumnDropdown)}
+              className="flex items-center gap-3 px-6 py-4 border-2 border-gray-200 rounded-xl hover:border-yellow-500 transition"
+            >
+              <Filter size={20} className="text-gray-500" />
+              <span className="text-gray-500 font-medium">
+                {visibleColumns.length} visibles
+              </span>
+            </button>
+
+            {showColumnDropdown && (
+              <div className="absolute top-full mt-2 right-0 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 p-4 space-y-4">
+                {allColumns.map((col) => (
+                  <label
+                    key={col.key}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.includes(col.key)}
+                      onChange={() => toggleColumn(col.key)}
+                      disabled={
+                        visibleColumns.includes(col.key) &&
+                        visibleColumns.length === 1
+                      }
+                      className="w-5 h-5 text-blue-900 rounded focus:ring-blue-900 disabled:opacity-50"
+                    />
+                    <span className="text-gray-800">{col.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="flex justify-between items-center p-6 border-b border-gray-100">
-            <div className="flex items-center gap-6">
-              <span className="text-gray-600 font-medium">
-                Formations ({formations.length})
-              </span>
-
-              <div className="relative inline-block text-left">
-                <button
-                  type="button"
-                  onClick={() => setShowColumnDropdown(!showColumnDropdown)}
-                  className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition whitespace-nowrap min-w-[220px]"
-                >
-                  <Filter size={18} />
-                  Afficher les colonnes
-                  <ChevronDown
-                    size={18}
-                    className={`text-gray-500 transition-transform ${
-                      showColumnDropdown ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                {showColumnDropdown && (
-                  <div
-                    className="
-                      absolute
-                      right-0
-                      top-full
-                      mt-2
-                      w-full
-                      min-w-[220px]
-                      bg-white
-                      rounded-xl
-                      shadow-2xl
-                      border border-gray-200
-                      overflow-hidden
-                      z-30
-                    "
-                  >
-                    <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
-                      {allColumns.map((col) => (
-                        <label
-                          key={col.key} // or whatever your key is (col.key, f.id, etc.)
-                          className="flex items-center px-5 py-3.5 hover:bg-blue-50/50 cursor-pointer transition-colors select-none group"
-                        >
-                          <div className="relative flex h-5 w-5 shrink-0 items-center justify-center">
-                            <input
-                              type="checkbox"
-                              checked={visibleColumns.includes(col.key)} // adapt to your state
-                              onChange={() => toggleColumn(col.key)} // adapt to your handler
-                              className="
-                              peer h-5 w-5 appearance-none rounded-md border-2 border-gray-300 bg-white
-                              checked:border-blue-600 checked:bg-blue-600
-                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                              transition-colors duration-200
-                              group-hover:border-blue-400
-                            "
-                            />
-                            {/* White checkmark - only visible when checked */}
-                            <svg
-                              className="pointer-events-none absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="3"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                          </div>
-                          <span className="ml-3 text-gray-700 font-medium group-hover:text-blue-700 transition-colors">
-                            {col.label}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <button
-                onClick={exportToCSV}
-                className="flex items-center gap-2 text-gray-600 hover:text-blue-900 transition font-medium"
-              >
-                <Download size={20} />
-                Exporter CSV
-              </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="p-3 rounded-xl hover:bg-gray-100 disabled:opacity-50 transition"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-
-                {getPageNumbers().map((page, i) =>
-                  page === "..." ? (
-                    <span key={i} className="px-4 text-gray-500">
-                      ...
-                    </span>
-                  ) : (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(page as number)}
-                      className={`w-12 h-12 rounded-xl font-medium transition ${
-                        currentPage === page
-                          ? "bg-blue-900 text-white shadow-md"
-                          : "hover:bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  )
-                )}
-
-                <button
-                  onClick={() =>
-                    setCurrentPage(Math.min(totalPages, currentPage + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                  className="p-3 rounded-xl hover:bg-gray-100 disabled:opacity-50 transition"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-
+        {/* Tableau */}
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
                 {editMode && (
-                  <th className="px-6 py-5 text-left w-12">
+                  <th className="px-6 py-5 w-12">
                     <input
                       type="checkbox"
                       checked={
@@ -875,14 +744,12 @@ export default function GestionFormations() {
                   </th>
                 )}
                 {visibleColumns.includes("title") && (
-                  <th className="px-6 py-5 text-left text-gray-700 font-medium">
-                    <button
-                      onClick={handleTitleSort}
-                      className="flex items-center gap-2 hover:text-blue-900 transition"
-                    >
-                      Titre
-                      <ArrowUpDown size={16} />
-                    </button>
+                  <th
+                    onClick={handleTitleSort}
+                    className="px-6 py-5 text-left text-gray-700 font-medium cursor-pointer select-none flex items-center gap-2 hover:text-blue-900 transition"
+                  >
+                    Titre
+                    <ArrowUpDown size={16} />
                   </th>
                 )}
                 {visibleColumns.includes("instructor") && (
@@ -903,6 +770,11 @@ export default function GestionFormations() {
                 {visibleColumns.includes("price") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Prix
+                  </th>
+                )}
+                {visibleColumns.includes("featured") && ( // Added
+                  <th className="px-6 py-5 text-left text-gray-700 font-medium">
+                    Populaire (Accueil)
                   </th>
                 )}
                 {visibleColumns.includes("dateCreation") && (
@@ -970,6 +842,11 @@ export default function GestionFormations() {
                         </span>
                       </td>
                     )}
+                    {visibleColumns.includes("featured") && ( // Added
+                      <td className="px-6 py-5 text-gray-700">
+                        {f.featured ? "Oui" : "Non"}
+                      </td>
+                    )}
                     {visibleColumns.includes("dateCreation") && (
                       <td className="px-6 py-5 text-gray-700">
                         {f.dateCreation
@@ -997,6 +874,42 @@ export default function GestionFormations() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-12">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 transition"
+            >
+              <ChevronLeft size={24} className="text-gray-600" />
+            </button>
+            {getPageNumbers().map((page, i) => (
+              <button
+                key={i}
+                onClick={() => typeof page === "number" && setCurrentPage(page)}
+                disabled={typeof page !== "number"}
+                className={`px-5 py-3 rounded-lg font-medium transition ${
+                  page === currentPage
+                    ? "bg-blue-900 text-white"
+                    : typeof page === "number"
+                    ? "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                    : "text-gray-400 cursor-default"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 transition"
+            >
+              <ChevronRight size={24} className="text-gray-600" />
+            </button>
+          </div>
+        )}
 
         {/* Modal */}
         {showModal && (
@@ -1109,6 +1022,26 @@ export default function GestionFormations() {
                   }
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition min-h-[100px]"
                 />
+
+                {/* Featured Checkbox – Added */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="featured"
+                    checked={formData.featured}
+                    onChange={(e) =>
+                      setFormData({ ...formData, featured: e.target.checked })
+                    }
+                    className="w-5 h-5 text-blue-900 rounded focus:ring-blue-900"
+                  />
+                  <label
+                    htmlFor="featured"
+                    className="text-gray-700 font-medium"
+                  >
+                    Afficher comme formation populaire sur la page d'accueil
+                    (max 4 recommandées)
+                  </label>
+                </div>
 
                 {/* Upload Image */}
                 <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
