@@ -25,6 +25,27 @@ const sponsors = [
     alt: "AZ Hotels",
     url: "https://www.azhotels.dz/",
   },
+ 
+  {
+    src: "/logos/algerie-telecom-seeklogo.png",
+    alt: "Algérie Telecom",
+    url: "https://www.algerietelecom.dz/",
+  },
+  {
+    src: "/logos/knauf-seeklogo.png",
+    alt: "Knauf",
+    url: "https://www.knauf.com/",
+  },
+  {
+    src: "/logos/mostaland.jpg",
+    alt: "Mostaland",
+    url: "https://www.mostaland.dz/", 
+  },
+  {
+    src: "/logos/setram-seeklogo.png",
+    alt: "Setram (Cetram)",
+    url: "https://www.setram.dz/", 
+  },
 ];
 
 export default function SponsorsCarousel() {

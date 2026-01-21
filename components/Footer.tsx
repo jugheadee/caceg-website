@@ -1,8 +1,39 @@
 // components/Footer.tsx
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function Footer() {
+  const [phones, setPhones] = useState<string[]>([]);
+  const [email, setEmail] = useState("contact@caceg-dz.com");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const docRef = doc(db, "settings", "contact");
+
+    const unsubscribe = onSnapshot(
+      docRef,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data() || {};
+          setPhones(data.phones || []);
+          setEmail(data.email || "contact@caceg-dz.com");
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Erreur chargement footer:", err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <footer className="bg-blue-950 text-gray-300 py-12">
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8">
@@ -55,7 +86,7 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Colonne 3 : Coordonnées */}
+        {/* Colonne 3 : Coordonnées – dynamic phones list */}
         <div>
           <h3 className="text-white font-bold text-lg mb-4">Coordonnées</h3>
           <ul className="space-y-4 text-sm">
@@ -65,21 +96,30 @@ export default function Footer() {
                 01, Place Ayachi Abderrahmane, BPS18 RP, Mostaganem, Algérie
               </span>
             </li>
-            <li className="flex items-center gap-3">
-              <span className="text-yellow-500">☎</span>
-              <span>+213 (0)23 58 86 76</span>
-            </li>
-            <li className="flex items-center gap-3">
-              <span className="text-yellow-500">📱</span>
-              <span>+213 (0)550 177 84</span>
-            </li>
+
+            {/* All phones */}
+            {loading ? (
+              <li className="flex items-center gap-3">
+                <span className="text-yellow-500">☎</span>
+                <span>Chargement...</span>
+              </li>
+            ) : (
+              phones.map((phone, index) => (
+                <li key={index} className="flex items-center gap-3">
+                  <span className="text-yellow-500">☎</span>
+                  <span>{phone}</span>
+                </li>
+              ))
+            )}
+
+            {/* Email */}
             <li className="flex items-center gap-3">
               <span className="text-yellow-500">✉</span>
               <a
-                href="mailto:contact@caceg-dz.com"
+                href={`mailto:${email}`}
                 className="hover:text-white transition"
               >
-                contact@caceg-dz.com
+                {loading ? "Chargement..." : email}
               </a>
             </li>
           </ul>
@@ -101,8 +141,7 @@ export default function Footer() {
       </div>
 
       <div className="mt-12 pt-8 border-t border-blue-800 text-center text-sm text-gray-400">
-        © {new Date().getFullYear()} CACEG. Tous droits réservés. Designed by
-        sefrone
+        © {new Date().getFullYear()} CACEG. Tous droits réservés.
       </div>
     </footer>
   );

@@ -2,8 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { onSnapshot, collection } from "firebase/firestore";
+import {
+  signOut,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+} from "firebase/auth";
+import {
+  onSnapshot,
+  collection,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import Image from "next/image";
 import {
@@ -17,6 +28,10 @@ import {
   Mail,
   HelpCircle,
   FileText,
+  Briefcase,
+  X,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 export default function AdminProtectedLayout({
@@ -33,6 +48,30 @@ export default function AdminProtectedLayout({
   // Badges en temps réel
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [nonLusCount, setNonLusCount] = useState(0);
+
+  // ── Password modal states ──
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pwdError, setPwdError] = useState("");
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordToast, setPasswordToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  // ── Contact / Coordonnées modal states ──
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [phones, setPhones] = useState<string[]>([]); // Dynamic list of phones
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactError, setContactError] = useState("");
+  const [loadingContact, setLoadingContact] = useState(false);
+  const [isSavingContact, setIsSavingContact] = useState(false);
+  const [contactToast, setContactToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
   // Vérification de session à chaque navigation (client-side)
   useEffect(() => {
@@ -74,6 +113,136 @@ export default function AdminProtectedLayout({
     });
     return () => unsub();
   }, []);
+
+  const loadContactSettings = async () => {
+    setLoadingContact(true);
+    setContactError("");
+
+    try {
+      const docRef = doc(db, "settings", "contact");
+      const snap = await getDoc(docRef);
+
+      if (snap.exists()) {
+        const data = snap.data() || {};
+        setPhones(data.phones || []); // Load array of phones
+        setContactEmail(data.email || "");
+      } else {
+        setContactError("Document non trouvé dans Firestore");
+      }
+    } catch (err: any) {
+      console.error("Erreur chargement coordonnées:", err);
+      setContactError("Erreur de chargement (réseau ou permissions)");
+    } finally {
+      setLoadingContact(false);
+    }
+  };
+
+  const addPhone = () => {
+    setPhones([...phones, ""]); // Add a new empty phone input
+  };
+
+  const removePhone = (index: number) => {
+    const newPhones = phones.filter((_, i) => i !== index);
+    setPhones(newPhones);
+  };
+
+  const updatePhone = (index: number, value: string) => {
+    const newPhones = [...phones];
+    newPhones[index] = value;
+    setPhones(newPhones);
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdError("");
+    setIsSavingPassword(true);
+
+    if (newPassword !== confirmPassword) {
+      setPwdError("Les mots de passe ne correspondent pas.");
+      setIsSavingPassword(false);
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPwdError(
+        "Le nouveau mot de passe doit contenir au moins 6 caractères."
+      );
+      setIsSavingPassword(false);
+      return;
+    }
+
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        setPwdError("Aucun utilisateur connecté.");
+        setIsSavingPassword(false);
+        return;
+      }
+
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        currentPassword
+      );
+      await reauthenticateWithCredential(user, credential);
+
+      await updatePassword(user, newPassword);
+
+      setPasswordToast({
+        message: "Mot de passe modifié avec succès !",
+        type: "success",
+      });
+      setTimeout(() => setPasswordToast(null), 3500);
+
+      setTimeout(() => {
+        setPasswordModalOpen(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      }, 2000);
+    } catch (err: any) {
+      if (err.code === "auth/wrong-password") {
+        setPwdError("Mot de passe actuel incorrect.");
+      } else if (err.code === "auth/requires-recent-login") {
+        setPwdError("Veuillez vous reconnecter pour cette opération.");
+      } else {
+        setPwdError(
+          err.message || "Erreur lors du changement de mot de passe."
+        );
+      }
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
+
+  const handleContactSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactError("");
+    setIsSavingContact(true);
+
+    try {
+      const docRef = doc(db, "settings", "contact");
+      await setDoc(
+        docRef,
+        {
+          phones, // Save array of phones
+          email: contactEmail,
+        },
+        { merge: true }
+      );
+
+      setContactToast({
+        message: "Coordonnées mises à jour avec succès !",
+        type: "success",
+      });
+      setTimeout(() => setContactToast(null), 3500);
+
+      setTimeout(() => setContactModalOpen(false), 2000);
+    } catch (err) {
+      console.error("Erreur sauvegarde coordonnées:", err);
+      setContactError("Erreur lors de la sauvegarde des coordonnées.");
+    } finally {
+      setIsSavingContact(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -124,15 +293,32 @@ export default function AdminProtectedLayout({
           </button>
 
           {profileOpen && (
-            <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 py-3 z-50">
-              <a
-                href="#"
-                className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition cursor-pointer"
+            <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-3 z-50">
+              <button
+                onClick={() => {
+                  setProfileOpen(false);
+                  setPasswordModalOpen(true);
+                }}
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition text-left cursor-pointer"
               >
                 <Settings size={18} />
                 Changer mot de passe
-              </a>
+              </button>
+
+              <button
+                onClick={() => {
+                  setProfileOpen(false);
+                  setContactModalOpen(true);
+                  loadContactSettings();
+                }}
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition text-left cursor-pointer"
+              >
+                <Mail size={18} />
+                Modifier coordonnées
+              </button>
+
               <hr className="my-2 border-gray-100" />
+
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 text-red-600 transition text-left cursor-pointer"
@@ -208,7 +394,18 @@ export default function AdminProtectedLayout({
               {sidebarExpanded && <span>Gestion Étudiants</span>}
             </button>
 
-            {/* Demandes Formulaires avec icône formulaire/document + badge */}
+            <button
+              onClick={() => navigateTo("/admin/dashboard/gestion-domaines")}
+              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
+                pathname.startsWith("/admin/gestion-domaines")
+                  ? "bg-blue-800 text-white font-semibold"
+                  : "text-gray-200 hover:bg-blue-700"
+              } ${!sidebarExpanded && "justify-center"}`}
+            >
+              <Briefcase size={iconSize} />
+              {sidebarExpanded && <span>Gestion Domaines</span>}
+            </button>
+
             <div className="relative">
               <button
                 onClick={() =>
@@ -230,7 +427,6 @@ export default function AdminProtectedLayout({
               )}
             </div>
 
-            {/* Gestion Messages + badge */}
             <div className="relative">
               <button
                 onClick={() => navigateTo("/admin/dashboard/gestion-messages")}
@@ -252,7 +448,7 @@ export default function AdminProtectedLayout({
           </div>
         </nav>
 
-        {/* Help + Déconnexion en bas (exactement comme ton exemple "correct") */}
+        {/* Help + Déconnexion en bas */}
         <div className="px-4 pb-6 space-y-6">
           <div>
             <p
@@ -298,6 +494,193 @@ export default function AdminProtectedLayout({
           </div>
         </div>
       </main>
+
+      {/* ── MODAL CHANGER MOT DE PASSE ── */}
+      {passwordModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative">
+            <button
+              onClick={() => setPasswordModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-bold text-blue-900 mb-6">
+              Changer le mot de passe
+            </h2>
+
+            <form onSubmit={handlePasswordChange} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Mot de passe actuel
+                </label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                  required
+                  disabled={isSavingPassword}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Nouveau mot de passe
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                  required
+                  disabled={isSavingPassword}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Confirmer le nouveau mot de passe
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                  required
+                  disabled={isSavingPassword}
+                />
+              </div>
+
+              {pwdError && <p className="text-red-600 text-sm">{pwdError}</p>}
+
+              <button
+                type="submit"
+                disabled={isSavingPassword}
+                className={`w-full bg-blue-900 text-white py-3 rounded-lg font-semibold hover:bg-blue-800 transition ${
+                  isSavingPassword ? "opacity-70 cursor-not-allowed" : ""
+                }`}
+              >
+                {isSavingPassword ? "Enregistrement..." : "Enregistrer"}
+              </button>
+
+              {/* Success message under button */}
+              {passwordToast && (
+                <div
+                  className={`mt-4 p-4 rounded-lg text-white font-medium flex items-center gap-3 justify-center ${
+                    passwordToast.type === "success"
+                      ? "bg-green-600"
+                      : "bg-red-600"
+                  }`}
+                >
+                  {passwordToast.type === "success" ? "✓" : "✕"}{" "}
+                  {passwordToast.message}
+                </div>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL MODIFIER COORDONNÉES ── */}
+      {contactModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative">
+            <button
+              onClick={() => setContactModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-bold text-blue-900 mb-6">
+              Modifier coordonnées
+            </h2>
+
+            {loadingContact ? (
+              <p className="text-center py-10 text-gray-600">Chargement...</p>
+            ) : (
+              <form onSubmit={handleContactSave} className="space-y-5">
+                {/* Dynamic phones list */}
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Numéros de téléphone
+                  </label>
+                  {phones.map((phone, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        value={phone}
+                        onChange={(e) => updatePhone(index, e.target.value)}
+                        placeholder="+213123456789"
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                        disabled={isSavingContact}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhone(index)}
+                        className="text-red-600 hover:text-red-800"
+                        disabled={isSavingContact || phones.length === 1} // At least one phone
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addPhone}
+                    className="flex items-center gap-2 text-blue-900 font-medium hover:text-blue-700"
+                    disabled={isSavingContact}
+                  >
+                    <Plus size={20} />
+                    Ajouter un numéro
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email de contact
+                  </label>
+                  <input
+                    type="email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                    disabled={isSavingContact}
+                  />
+                </div>
+
+                {contactError && (
+                  <p className="text-red-600 text-sm">{contactError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSavingContact || loadingContact}
+                  className={`w-full bg-blue-900 text-white py-3 rounded-lg font-semibold hover:bg-blue-800 transition ${
+                    isSavingContact || loadingContact
+                      ? "opacity-70 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  {isSavingContact ? "Enregistrement..." : "Enregistrer"}
+                </button>
+
+                {/* Success message under button */}
+                {contactToast && (
+                  <div
+                    className={`mt-4 p-4 rounded-lg text-white font-medium flex items-center gap-3 justify-center ${
+                      contactToast.type === "success"
+                        ? "bg-green-600"
+                        : "bg-red-600"
+                    }`}
+                  >
+                    {contactToast.type === "success" ? "✓" : "✕"}{" "}
+                    {contactToast.message}
+                  </div>
+                )}
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

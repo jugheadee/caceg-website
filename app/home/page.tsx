@@ -12,8 +12,10 @@ import {
   onSnapshot,
   limit,
   orderBy,
-} from "firebase/firestore"; // Added imports
-import { db } from "@/lib/firebase"; // Added
+  getDocs,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { ChevronRight } from "lucide-react";
 
 const slides = [
   {
@@ -41,7 +43,6 @@ const slides = [
 ];
 
 interface Formation {
-  // Added interface for popular formations
   id: string;
   title: string;
   instructor: string;
@@ -54,7 +55,8 @@ interface Formation {
 
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [popularFormations, setPopularFormations] = useState<Formation[]>([]); // Added state
+  const [popularFormations, setPopularFormations] = useState<Formation[]>([]);
+  const [isLoadingPopular, setIsLoadingPopular] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -63,28 +65,71 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch popular formations – Added
+  // Fetch popular formations – MODIFIÉ : limit(6) au lieu de 4
   useEffect(() => {
-    const q = query(
-      collection(db, "formations"),
-      where("featured", "==", true),
-      orderBy("dateCreation", "desc"),
-      limit(4)
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-          } as Formation)
+    let unsubscribe: () => void = () => {};
+
+    const loadPopular = async () => {
+      console.log("Starting loadPopular...");
+      setIsLoadingPopular(true);
+
+      const q = query(
+        collection(db, "formations"),
+        where("featured", "==", true),
+        orderBy("dateCreation", "desc"),
+        limit(6)
       );
-      setPopularFormations(data);
-    });
 
-    return () => unsubscribe();
+      try {
+        console.log("Attempting getDocs...");
+        const snap = await getDocs(q);
+        console.log("getDocs succeeded! Count:", snap.size);
+        const initial = snap.docs.map(
+          (doc) =>
+            ({
+              id: doc.id,
+              ...doc.data(),
+            } as Formation)
+        );
+        console.log("Initial data:", initial);
+        setPopularFormations(initial);
+        setIsLoadingPopular(false);
+
+        console.log("Attaching onSnapshot...");
+        unsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            console.log("onSnapshot fired! Count:", snapshot.size);
+            const updated = snapshot.docs.map(
+              (doc) =>
+                ({
+                  id: doc.id,
+                  ...doc.data(),
+                } as Formation)
+            );
+            setPopularFormations(updated);
+          },
+          (error) => {
+            console.error("onSnapshot ERROR:", error.code, error.message);
+            setIsLoadingPopular(false);
+          }
+        );
+      } catch (err: any) {
+        console.error(
+          "Firestore query FAILED:",
+          err.code || err.message || err
+        );
+        setIsLoadingPopular(false);
+      }
+    };
+
+    loadPopular();
+
+    return () => {
+      console.log("Cleaning up...");
+      unsubscribe();
+    };
   }, []);
-
   const prevSlide = () =>
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -93,10 +138,8 @@ export default function Home() {
     <main className="min-h-screen bg-white">
       <Navbar />
 
-      {/* HERO SLIDER CLASSE ET MODERNE */}
-      <section className="relative h-[70vh] min-h-[500px] overflow-hidden group">
-        {" "}
-        {/* group pour hover global */}
+      {/* HERO SLIDER */}
+      <section className="relative h-[80vh] min-h-[600px] overflow-hidden group">
         {slides.map((slide, index) => (
           <div
             key={index}
@@ -113,7 +156,6 @@ export default function Home() {
               className="object-cover"
               priority={index === 0}
             />
-            {/* Overlay gradient élégant */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
             <div className="relative h-full flex items-center justify-center text-center text-white px-6">
               <div
@@ -139,7 +181,7 @@ export default function Home() {
             </div>
           </div>
         ))}
-        {/* Flèches – apparaissent en fade + scale au hover */}
+
         <button
           onClick={prevSlide}
           className="absolute left-8 top-1/2 -translate-y-1/2 z-20 text-white text-5xl opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 transition-all duration-700"
@@ -154,7 +196,7 @@ export default function Home() {
         >
           ›
         </button>
-        {/* Points indicateurs – apparaissent en fade au hover */}
+
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
           {slides.map((_, index) => (
             <button
@@ -243,7 +285,7 @@ export default function Home() {
               className="rounded-xl shadow-xl mb-8 mx-auto md:mx-0"
             />
             <h2 className="text-3xl font-bold text-blue-900 mb-6">
-              CACEG Consulting
+              CACEG Conseil et Etude
             </h2>
             <p className="text-gray-700 mb-8 text-lg">
               Nous avons pour mission d'accompagner les entreprises dans leurs
@@ -260,25 +302,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* New Section: Formations Populaires – Added */}
+      {/* Formations Populaires  */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-center text-blue-900 mb-12">
             Nos Formations Populaires
           </h2>
-          {popularFormations.length === 0 ? (
+
+          {isLoadingPopular ? (
+            <div className="text-center py-20">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-yellow-500 border-t-transparent"></div>
+              <p className="mt-4 text-xl text-gray-600">
+                Chargement des formations...
+              </p>
+            </div>
+          ) : popularFormations.length === 0 ? (
             <p className="text-center text-2xl text-gray-600 py-20">
               Aucune formation populaire disponible pour le moment.
             </p>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
               {popularFormations.map((f) => (
                 <Link
                   href={`/formations/${f.slug}`}
                   key={f.id}
                   className="block"
                 >
-                  <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-3 transition-all duration-300 overflow-hidden">
+                  <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-3 transition-all duration-300 overflow-hidden h-full flex flex-col">
                     <div className="relative h-56">
                       <Image
                         src={
@@ -289,27 +339,13 @@ export default function Home() {
                         fill
                         className="object-cover"
                       />
-                      <span
-                        className={`absolute top-4 right-4 px-4 py-2 rounded-full font-bold text-sm ${
-                          f.price === "Gratuit"
-                            ? "bg-yellow-500 text-blue-900"
-                            : "bg-green-600 text-white"
-                        }`}
-                      >
-                        {f.price}
-                      </span>
                     </div>
-                    <div className="p-8">
+                    <div className="p-8 flex flex-col flex-grow">
                       <h3 className="text-xl font-bold text-blue-900 mb-3 line-clamp-2">
                         {f.title}
                       </h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Par {f.instructor || "CACEG"}
-                      </p>
-                      <p className="text-gray-700 line-clamp-3 mb-6">
-                        {f.description}
-                      </p>
-                      <span className="text-blue-900 font-semibold hover:underline flex items-center gap-2">
+
+                      <span className="text-blue-900 font-semibold hover:underline flex items-center gap-2 mt-auto">
                         En savoir plus{" "}
                         <span className="text-yellow-500">→</span>
                       </span>
@@ -321,71 +357,11 @@ export default function Home() {
           )}
         </div>
       </section>
-
-      {/* Témoignages */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-4xl font-bold text-center text-blue-900 mb-12">
-            Ce que disent nos clients
-          </h2>
-          <div className="grid md:grid-cols-2 gap-12">
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <p className="text-gray-700 italic mb-6">
-                "J'ai vraiment apprécié les cours de CACEG et j'espère pouvoir
-                suivre d'autres formations avec eux. Les explications sont
-                claires ainsi que les exemples sont bien présentés et faciles à
-                suivre."
-              </p>
-              <p className="font-semibold text-blue-900">Mohamed</p>
-              <p className="text-sm text-gray-600">Développeur Web</p>
-            </div>
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <p className="text-gray-700 italic mb-6">
-                "Les cours ici ont dépassé mes attentes à bien des égards.
-                L'approche pédagogique est claire et structurée. Dans un
-                environnement très calme, j'ai appris les principes clés du
-                design que je peux mettre en œuvre immédiatement."
-              </p>
-              <p className="font-semibold text-blue-900">Rafik Ziani</p>
-              <p className="text-sm text-gray-600">Infographie</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter */}
-      <section className="py-24 bg-blue-950 text-white">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-8">
-            Abonnez-vous à notre newsletter
-          </h2>
-          <p className="text-xl text-blue-200 mb-12 max-w-2xl mx-auto">
-            Recevez en exclusivité nos actualités, nouvelles formations et
-            conseils en management & consulting.
-          </p>
-
-          <form className="flex flex-col md:flex-row gap-6 max-w-2xl mx-auto items-center justify-center">
-            <input
-              type="email"
-              placeholder="Votre adresse email"
-              required
-              className="w-full px-8 py-5 text-lg text-gray-900 placeholder-gray-500 bg-white rounded-full focus:outline-none focus:ring-4 focus:ring-yellow-400 focus:ring-opacity-50 transition-shadow shadow-lg"
-            />
-            <button
-              type="submit"
-              className="w-full md:w-auto bg-yellow-500 text-blue-950 font-bold px-12 py-5 rounded-full text-lg hover:bg-yellow-400 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-            >
-              S'abonner
-            </button>
-          </form>
-        </div>
-      </section>
-
       {/* Sponsors */}
       <section className="py-16 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-center text-blue-900 mb-12">
-            Nos Partenaires et Sponsors
+            Nos Clients
           </h2>
           <SponsorsCarousel />
         </div>

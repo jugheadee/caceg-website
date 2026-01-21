@@ -1,18 +1,67 @@
-"use client";
+'use client';
 
-import Navbar from "@/components/NavBar";
-import Image from "next/image";
-import Link from "next/link";
+import Navbar from '@/components/NavBar';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { collection, onSnapshot, orderBy, query, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import Footer from '@/components/Footer';
+import { ChevronRight } from "lucide-react";
+
+interface Domaine {
+  id: string;
+  title: string;
+  description?: string;
+  image?: string;
+  order?: number;
+}
 
 export default function ConsultingPage() {
+  const [domaines, setDomaines] = useState<Domaine[]>([]);
+  const [globalImageUrl, setGlobalImageUrl] = useState<string>("");
+
+  // Charger les domaines
+  useEffect(() => {
+    const q = query(
+      collection(db, "domaines"),
+      orderBy("order", "asc")
+    );
+
+    const unsubDomaines = onSnapshot(q, (snap) => {
+      const data = snap.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Domaine)
+      );
+      setDomaines(data);
+    });
+
+    // Charger l'image fixe à droite
+    const unsubImage = onSnapshot(
+      doc(db, "global-settings", "consulting-banner"),
+      (snap) => {
+        if (snap.exists()) {
+          setGlobalImageUrl(snap.data()?.url || "");
+        } else {
+          setGlobalImageUrl("");
+        }
+      }
+    );
+
+    return () => {
+      unsubDomaines();
+      unsubImage();
+    };
+  }, []);
+
   return (
     <main className="min-h-screen bg-white">
       <Navbar />
       <div className="h-16 lg:h-20"></div> {/* Spacer pour navbar */}
+
       {/* Hero */}
       <section className="relative h-[60vh] min-h-[500px] flex items-center justify-center bg-gradient-to-r from-blue-900 to-blue-800 text-white">
         <Image
-          src="/IA.png" // Télécharge une belle image pro (voir liste ci-dessous)
+          src="/IA.png"
           alt="Consulting CACEG"
           fill
           className="object-cover"
@@ -28,6 +77,7 @@ export default function ConsultingPage() {
           </p>
         </div>
       </section>
+
       {/* Introduction CACEG Consulting */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
@@ -56,7 +106,7 @@ export default function ConsultingPage() {
             </div>
             <div className="flex justify-center">
               <Image
-                src="/IA-consulting.png" // Image d'équipe pro
+                src="/IA-consulting.png"
                 alt="Équipe CACEG Consulting"
                 width={600}
                 height={400}
@@ -66,87 +116,64 @@ export default function ConsultingPage() {
           </div>
         </div>
       </section>
-      {/* Domaines de compétence (infographie circulaire) */}
+
+      {/* Domaines de compétence – liste simple avec check jaune + image à droite */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold text-blue-900 text-center mb-12">
             Domaines de compétence
           </h2>
-          <div className="grid md:grid-cols-2 gap-12">
-            {/* Liste des domaines */}
+
+          <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-start">
+            {/* Colonne gauche : liste des domaines */}
             <div>
-              <ul className="space-y-4 text-lg text-gray-700">
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Organisation
-                  et conduite du changement
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Cartographie
-                  des risques
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Développement
-                  organisationnel
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Ressources
-                  humaines
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Recrutement
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Ingénierie de
-                  la Formation
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Formation et
-                  développement des ressources humaines
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Législation du
-                  travail et conformité sociale
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Gestion des
-                  conflits sociaux en entreprise
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Communication
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Développement
-                  local et gouvernance locale
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Conseil aux
-                  PME/PMI et aux Associations professionnelles
-                </li>
-                <li className="flex items-start">
-                  <span className="text-yellow-500 mr-3">✔</span> Conseil
-                  juridique et administratif
-                </li>
-              </ul>
+              {domaines.length === 0 ? (
+                <p className="text-center text-gray-600 py-8">
+                  Aucun domaine disponible pour le moment.
+                </p>
+              ) : (
+                <ul className="space-y-5 text-lg md:text-xl text-gray-800">
+                  {domaines.map((domaine) => (
+                    <li 
+                      key={domaine.id} 
+                      className="flex items-center gap-4"
+                    >
+                      <span className="text-yellow-500 text-2xl font-black flex-shrink-0">✔</span>
+                      <span className="leading-relaxed font-bold">{domaine.title}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
-            {/* Infographie circulaire */}
-            <div className="flex justify-center">
-              <Image
-                src="/banner2.jpg" 
-                alt="Domaines de compétence CACEG"
-                width={500}
-                height={500}
-                className=" rounded-xl shadow-2xl"
-              />
+            {/* Colonne droite : image fixe */}
+            <div className="flex justify-center md:justify-end lg:pl-8">
+              {globalImageUrl ? (
+                <div className="w-full max-w-[480px] lg:max-w-[520px]">
+                  <Image
+                    src={globalImageUrl}
+                    alt="Domaines de compétence CACEG Consulting"
+                    width={520}
+                    height={520}
+                    className="rounded-2xl shadow-2xl object-cover w-full h-auto"
+                    priority
+                  />
+                </div>
+              ) : (
+                <div className="w-full max-w-md aspect-square bg-gray-100 rounded-2xl flex items-center justify-center text-gray-500 text-center p-8">
+                  Image illustrative des domaines de compétence
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
+
       {/* Certification ISO */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <h2 className="text-4xl font-bold text-blue-900 mb-8">
-            Certification ISO
+            Accompagnement certification ISO
           </h2>
           <p className="text-xl text-gray-700 max-w-4xl mx-auto mb-12">
             Engagez votre organisation dans une démarche de certification ISO.
@@ -156,7 +183,7 @@ export default function ConsultingPage() {
           </p>
           <div className="flex justify-center mb-12">
             <Image
-              src="/iso.jpeg" // Logo ISO stylisé
+              src="/iso.jpeg"
               alt="ISO Certification CACEG"
               width={400}
               height={400}
@@ -171,6 +198,7 @@ export default function ConsultingPage() {
           </Link>
         </div>
       </section>
+
       {/* Gestion de projet */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
@@ -199,112 +227,8 @@ export default function ConsultingPage() {
           />
         </div>
       </section>
-      {/* Footer */}
-      <footer className="bg-blue-950 text-gray-300 py-12">
-        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8">
-          {/* Colonne 1 : CACEG */}
-          <div>
-            <h3 className="text-white font-bold text-lg mb-4">CACEG</h3>
-            <p className="text-sm leading-relaxed">
-              CACEG Consulting, spécialisé en Formation, consulting et étude
-              ainsi en management et ressources humaines (RH). Notre cabinet de
-              formation agréé en Algérie réalise des formations
-              professionnelles.
-            </p>
-          </div>
-
-          {/* Colonne 2 : Liens Utiles */}
-          <div>
-            <h3 className="text-white font-bold text-lg mb-4">Liens Utiles</h3>
-            <ul className="space-y-3 text-sm">
-              <li>
-                <Link
-                  href="/formations"
-                  className="hover:text-white transition flex items-center gap-2"
-                >
-                  <span className="text-yellow-500">›</span> Formations
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/actualites"
-                  className="hover:text-white transition flex items-center gap-2"
-                >
-                  <span className="text-yellow-500">›</span> Actualités
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/presentation"
-                  className="hover:text-white transition flex items-center gap-2"
-                >
-                  <span className="text-yellow-500">›</span> À propos
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/faq"
-                  className="hover:text-white transition flex items-center gap-2"
-                >
-                  <span className="text-yellow-500">›</span> FAQ
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Colonne 3 : Coordonnées */}
-          <div>
-            <h3 className="text-white font-bold text-lg mb-4">Coordonnées</h3>
-            <ul className="space-y-4 text-sm">
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500">📍</span>
-                <span>
-                  01, Place Ayachi Abderrahmane, BPS18 RP,Mostaganem, Algérie
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="text-yellow-500">☎</span>
-                <span>+213 (0)23 58 86 76</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="text-yellow-500">📱</span>
-                <span>+213 (0)550 177 84</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="text-yellow-500">✉</span>
-                <a
-                  href="mailto:contact@caceg-dz.com"
-                  className="hover:text-white transition"
-                >
-                  contact@caceg-dz.com
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Colonne 4 : Logo FEDE à droite */}
-          <div className="flex flex-col items-end justify-start pr-8">
-            {" "}
-            {/* padding droite pour centrer visuellement */}
-            <p className="text-sm text-gray-400 mb-4 w-full text-right">
-              CACEG est agréé par :
-            </p>
-            <Image
-              src="/logos/fede.png"
-              alt="FEDE - Fédération Européenne Des Écoles"
-              width={180}
-              height={80}
-              className="object-contain"
-            />
-          </div>
-        </div>
-
-        {/* Ligne du bas */}
-        <div className="mt-12 pt-8 border-t border-blue-800 text-center text-sm text-gray-400">
-          © {new Date().getFullYear()} CACEG. Tous droits réservés. Designed by
-          sefrone
-        </div>
-      </footer>
+ <Footer/>
+    
     </main>
   );
 }

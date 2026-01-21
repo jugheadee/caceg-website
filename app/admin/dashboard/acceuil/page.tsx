@@ -24,7 +24,7 @@ import {
 interface Formation {
   id: string;
   title: string;
-  duration?: string;
+  duration: string;
   price: string;
 }
 

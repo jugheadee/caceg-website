@@ -9,7 +9,8 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase"; // ← CHANGEMENT : on importe storage depuis firebase.ts
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // ← CHANGEMENT : imports Firebase Storage
 import {
   Edit,
   Download,
@@ -22,6 +23,9 @@ import {
   X,
   Check,
   ArrowUpDown,
+  Eye,
+  EyeOff,
+  AlertTriangle,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -52,15 +56,7 @@ const allColumns = [
   { key: "dateCreation", label: "Date création" },
 ];
 
-// Génération automatique du slug
-const generateSlug = (title: string): string => {
-  return title
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-};
+const MAX_FEATURED = 6;
 
 function CustomSelect({
   options,
@@ -131,6 +127,15 @@ function CustomSelect({
   );
 }
 
+const generateSlug = (title: string): string => {
+  return title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
+
 export default function GestionFormations() {
   const [allFormations, setAllFormations] = useState<Formation[]>([]);
   const [formations, setFormations] = useState<Formation[]>([]);
@@ -139,7 +144,7 @@ export default function GestionFormations() {
   const [editMode, setEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-
+  const [showFeaturedLimitModal, setShowFeaturedLimitModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterInstructor, setFilterInstructor] = useState("");
   const [filterFree, setFilterFree] = useState(false);
@@ -179,6 +184,15 @@ export default function GestionFormations() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Reset selections whenever we exit edit mode
+    if (!editMode) {
+      setSelectedIds(new Set());
+    }
+  }, [editMode]);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "formations"), (snap) => {
@@ -336,6 +350,9 @@ export default function GestionFormations() {
     setShowPriceDropdown(false);
   };
 
+  // ────────────────────────────────────────────────────────────────
+  // CHANGEMENT PRINCIPAL : upload image vers Firebase Storage
+  // ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -356,23 +373,25 @@ export default function GestionFormations() {
 
     if (selectedFile) {
       try {
-        const formDataUpload = new FormData();
-        formDataUpload.append("file", selectedFile);
-        formDataUpload.append("upload_preset", "caceg_preset");
+        // 1. Créer un nom unique pour le fichier
+        const fileName = `${Date.now()}_${selectedFile.name.replace(
+          /\s+/g,
+          "_"
+        )}`;
 
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/dv1i4lsgq/image/upload`,
-          {
-            method: "POST",
-            body: formDataUpload,
-          }
-        );
+        // 2. Créer la référence dans le dossier "formations/"
+        const storageRef = ref(storage, `formations/${fileName}`);
 
-        const data = await response.json();
-        imageUrl = data.secure_url;
+        // 3. Uploader le fichier
+        const snapshot = await uploadBytes(storageRef, selectedFile);
+
+        // 4. Récupérer l'URL publique
+        imageUrl = await getDownloadURL(snapshot.ref);
+
+        console.log("Image uploaded to Firebase:", imageUrl);
       } catch (error) {
-        console.error("Erreur lors du téléchargement de l'image:", error);
-        alert("Erreur lors du téléchargement de l'image");
+        console.error("Erreur upload Firebase Storage:", error);
+        alert("Erreur lors du téléchargement de l'image sur Firebase");
         setUploading(false);
         return;
       }
@@ -390,7 +409,7 @@ export default function GestionFormations() {
       objectives: formData.objectives?.trim() || "",
       prerequisites: formData.prerequisites?.trim() || "",
       targetAudience: formData.targetAudience?.trim() || "",
-      featured: formData.featured, // Added
+      featured: formData.featured,
       dateCreation: new Date().toISOString(),
     };
 
@@ -402,8 +421,8 @@ export default function GestionFormations() {
       }
       closeModal();
     } catch (error) {
-      console.error("Erreur:", error);
-      alert("Erreur lors de la sauvegarde");
+      console.error("Erreur sauvegarde formation:", error);
+      alert("Erreur lors de la sauvegarde de la formation");
     } finally {
       setUploading(false);
     }
@@ -530,6 +549,26 @@ export default function GestionFormations() {
     document.body.removeChild(link);
   };
 
+  const handleToggleFeatured = async (formation: Formation) => {
+    const currentFeaturedCount = formations.filter((f) => f.featured).length;
+
+    // If trying to ADD featured (i.e. currently not featured) and we're at max
+    if (!formation.featured && currentFeaturedCount >= MAX_FEATURED) {
+      setShowFeaturedLimitModal(true);
+      return; // ← stop here, don't toggle
+    }
+
+    // Normal toggle if under limit or removing one
+    try {
+      await updateDoc(doc(db, "formations", formation.id), {
+        featured: !formation.featured,
+      });
+    } catch (error) {
+      console.error("Erreur lors du toggle featured:", error);
+      alert("Une erreur est survenue lors de la mise à jour.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-6 py-12">
@@ -546,29 +585,37 @@ export default function GestionFormations() {
               <Plus size={20} />
               Nouvelle formation
             </button>
-            <button
-              onClick={exportToCSV}
-              className="flex items-center gap-2 bg-green-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-green-500 transition"
-            >
-              <Download size={20} />
-              Exporter CSV
-            </button>
-            <button
-              onClick={() => setEditMode(!editMode)}
-              className="flex items-center gap-2 bg-blue-900 text-white font-bold px-6 py-3 rounded-xl hover:bg-blue-800 transition"
-            >
-              <Edit size={20} />
-              {editMode ? "Quitter mode édition" : "Mode édition"}
-            </button>
-            {editMode && selectedIds.size > 0 && (
+
+            {/* Conditional: show either Export or Supprimer */}
+            {editMode && selectedIds.size > 0 ? (
               <button
                 onClick={handleBatchDelete}
-                className="flex items-center gap-2 bg-red-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-red-500 transition"
+                className="flex items-center gap-2 bg-red-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-red-700 transition shadow-md"
               >
                 <X size={20} />
                 Supprimer ({selectedIds.size})
               </button>
+            ) : (
+              <button
+                onClick={exportToCSV}
+                className="flex items-center gap-2 bg-green-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-green-500 transition"
+              >
+                <Download size={20} />
+                Exporter CSV
+              </button>
             )}
+
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className={`flex items-center gap-2 font-bold px-6 py-3 rounded-xl transition ${
+                editMode
+                  ? "bg-gray-600 text-white hover:bg-gray-700"
+                  : "bg-blue-900 text-white hover:bg-blue-800"
+              }`}
+            >
+              <Edit size={20} />
+              {editMode ? "Quitter mode édition" : "Mode édition"}
+            </button>
           </div>
         </div>
 
@@ -772,7 +819,7 @@ export default function GestionFormations() {
                     Prix
                   </th>
                 )}
-                {visibleColumns.includes("featured") && ( // Added
+                {visibleColumns.includes("featured") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Populaire (Accueil)
                   </th>
@@ -842,9 +889,27 @@ export default function GestionFormations() {
                         </span>
                       </td>
                     )}
-                    {visibleColumns.includes("featured") && ( // Added
-                      <td className="px-6 py-5 text-gray-700">
-                        {f.featured ? "Oui" : "Non"}
+                    {visibleColumns.includes("featured") && (
+                      <td className="px-6 py-5 text-center">
+                        <button
+                          onClick={() => handleToggleFeatured(f)}
+                          className={`p-2 rounded-full transition ${
+                            f.featured
+                              ? "text-blue-600 hover:text-blue-800 bg-blue-100"
+                              : "text-gray-400 hover:text-gray-600 bg-gray-100"
+                          }`}
+                          title={
+                            f.featured
+                              ? "Retirer des formations populaires"
+                              : "Ajouter aux formations populaires"
+                          }
+                        >
+                          {f.featured ? (
+                            <Eye size={24} />
+                          ) : (
+                            <EyeOff size={24} />
+                          )}
+                        </button>
                       </td>
                     )}
                     {visibleColumns.includes("dateCreation") && (
@@ -874,42 +939,6 @@ export default function GestionFormations() {
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-4 mt-12">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 transition"
-            >
-              <ChevronLeft size={24} className="text-gray-600" />
-            </button>
-            {getPageNumbers().map((page, i) => (
-              <button
-                key={i}
-                onClick={() => typeof page === "number" && setCurrentPage(page)}
-                disabled={typeof page !== "number"}
-                className={`px-5 py-3 rounded-lg font-medium transition ${
-                  page === currentPage
-                    ? "bg-blue-900 text-white"
-                    : typeof page === "number"
-                    ? "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                    : "text-gray-400 cursor-default"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 transition"
-            >
-              <ChevronRight size={24} className="text-gray-600" />
-            </button>
-          </div>
-        )}
 
         {/* Modal */}
         {showModal && (
@@ -962,7 +991,8 @@ export default function GestionFormations() {
                     setFormData({ ...formData, description: e.target.value })
                   }
                   required
-                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition min-h-[120px]"
+                  rows={5}
+                  className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                 />
 
                 <input
@@ -1023,27 +1053,7 @@ export default function GestionFormations() {
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition min-h-[100px]"
                 />
 
-                {/* Featured Checkbox – Added */}
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="featured"
-                    checked={formData.featured}
-                    onChange={(e) =>
-                      setFormData({ ...formData, featured: e.target.checked })
-                    }
-                    className="w-5 h-5 text-blue-900 rounded focus:ring-blue-900"
-                  />
-                  <label
-                    htmlFor="featured"
-                    className="text-gray-700 font-medium"
-                  >
-                    Afficher comme formation populaire sur la page d'accueil
-                    (max 4 recommandées)
-                  </label>
-                </div>
-
-                {/* Upload Image */}
+                {/* Upload Image – partie modifiée pour Firebase */}
                 <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
                   <input
                     type="file"
@@ -1075,7 +1085,7 @@ export default function GestionFormations() {
                         Télécharger une image
                       </p>
                       <p className="text-sm text-gray-500">
-                        PNG, JPG, GIF jusqu'à 5MB
+                        PNG, JPG, GIF – max 5MB
                       </p>
                     </div>
                   </label>
@@ -1140,6 +1150,34 @@ export default function GestionFormations() {
                   className="flex-1 bg-red-600 text-white font-bold py-4 rounded-xl hover:bg-red-700 transition"
                 >
                   Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showFeaturedLimitModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
+              {/* ← Add the icon here */}
+              <div className="flex justify-center mb-4">
+                <AlertTriangle size={48} className="text-yellow-500" />
+              </div>
+
+              <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+                Limite atteinte
+              </h3>
+              <p className="text-gray-600 text-center mb-8">
+                Vous avez déjà <strong>{MAX_FEATURED}</strong> formations mises
+                en avant sur la page d'accueil !<br />
+                Pour en ajouter une nouvelle, retirez-en une d'abord.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowFeaturedLimitModal(false)}
+                  className="flex-1 bg-yellow-500 text-blue-900 font-bold py-4 rounded-xl hover:bg-yellow-400 transition"
+                >
+                  Fermer
                 </button>
               </div>
             </div>
