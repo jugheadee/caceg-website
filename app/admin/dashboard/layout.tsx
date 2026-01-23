@@ -34,6 +34,10 @@ import {
   Trash2,
 } from "lucide-react";
 
+// Phone input
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
+
 export default function AdminProtectedLayout({
   children,
 }: {
@@ -45,11 +49,11 @@ export default function AdminProtectedLayout({
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // Badges en temps réel
+  // Real-time badges
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [nonLusCount, setNonLusCount] = useState(0);
 
-  // ── Password modal states ──
+  // Password modal
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -61,9 +65,9 @@ export default function AdminProtectedLayout({
     type: "success" | "error";
   } | null>(null);
 
-  // ── Contact / Coordonnées modal states ──
+  // Contact modal
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [phones, setPhones] = useState<string[]>([]); // Dynamic list of phones
+  const [phones, setPhones] = useState<string[]>([]);
   const [contactEmail, setContactEmail] = useState("");
   const [contactError, setContactError] = useState("");
   const [loadingContact, setLoadingContact] = useState(false);
@@ -73,28 +77,25 @@ export default function AdminProtectedLayout({
     type: "success" | "error";
   } | null>(null);
 
-  // Vérification de session à chaque navigation (client-side)
+  // Session check on navigation
   useEffect(() => {
     const checkSession = async () => {
       try {
         const res = await fetch("/api/auth-check", {
           credentials: "include",
         });
-
         const data = await res.json();
-
         if (!res.ok || !data.valid) {
           router.replace("/admin/session-expired");
         }
-      } catch (error) {
+      } catch {
         router.replace("/admin/session-expired");
       }
     };
-
     checkSession();
   }, [pathname, router]);
 
-  // Écoute en temps réel des demandes (inscriptions)
+  // Real-time pending requests count
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "inscriptions"), (snapshot) => {
       setPendingRequestsCount(snapshot.size);
@@ -102,7 +103,7 @@ export default function AdminProtectedLayout({
     return () => unsub();
   }, []);
 
-  // Écoute en temps réel des messages non lus
+  // Real-time unread messages count
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "messages"), (snapshot) => {
       let count = 0;
@@ -124,7 +125,7 @@ export default function AdminProtectedLayout({
 
       if (snap.exists()) {
         const data = snap.data() || {};
-        setPhones(data.phones || []); // Load array of phones
+        setPhones(data.phones || []);
         setContactEmail(data.email || "");
       } else {
         setContactError("Document non trouvé dans Firestore");
@@ -138,12 +139,11 @@ export default function AdminProtectedLayout({
   };
 
   const addPhone = () => {
-    setPhones([...phones, ""]); // Add a new empty phone input
+    setPhones([...phones, ""]);
   };
 
   const removePhone = (index: number) => {
-    const newPhones = phones.filter((_, i) => i !== index);
-    setPhones(newPhones);
+    setPhones(phones.filter((_, i) => i !== index));
   };
 
   const updatePhone = (index: number, value: string) => {
@@ -183,7 +183,6 @@ export default function AdminProtectedLayout({
         currentPassword
       );
       await reauthenticateWithCredential(user, credential);
-
       await updatePassword(user, newPassword);
 
       setPasswordToast({
@@ -219,13 +218,9 @@ export default function AdminProtectedLayout({
     setIsSavingContact(true);
 
     try {
-      const docRef = doc(db, "settings", "contact");
       await setDoc(
-        docRef,
-        {
-          phones, // Save array of phones
-          email: contactEmail,
-        },
+        doc(db, "settings", "contact"),
+        { phones, email: contactEmail },
         { merge: true }
       );
 
@@ -234,7 +229,6 @@ export default function AdminProtectedLayout({
         type: "success",
       });
       setTimeout(() => setContactToast(null), 3500);
-
       setTimeout(() => setContactModalOpen(false), 2000);
     } catch (err) {
       console.error("Erreur sauvegarde coordonnées:", err);
@@ -263,7 +257,7 @@ export default function AdminProtectedLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* ── HEADER ── */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-gray-50/80 backdrop-blur-md flex items-center justify-between px-6 z-50 shadow-sm">
         <div className="flex items-center gap-5">
           <button
@@ -331,14 +325,14 @@ export default function AdminProtectedLayout({
         </div>
       </header>
 
-      {/* Sidebar */}
+      {/* ── SIDEBAR ── */}
       <aside
         className={`fixed left-0 top-16 bottom-0 bg-blue-900 text-white transition-all duration-300 z-40 flex flex-col ${
           sidebarExpanded ? "w-68" : "w-20"
         }`}
       >
         <nav className="flex-1 py-6 px-4 space-y-6 overflow-y-auto">
-          {/* Principal */}
+          {/* PRINCIPAL */}
           <div>
             <p
               className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${
@@ -360,7 +354,7 @@ export default function AdminProtectedLayout({
             </button>
           </div>
 
-          {/* Forms and Datas */}
+          {/* FORMS AND DATAS */}
           <div>
             <p
               className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${
@@ -373,7 +367,7 @@ export default function AdminProtectedLayout({
             <button
               onClick={() => navigateTo("/admin/dashboard/gestion-formations")}
               className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname.startsWith("/admin/gestion-formations")
+                pathname.startsWith("/admin/dashboard/gestion-formations")
                   ? "bg-blue-800 text-white font-semibold"
                   : "text-gray-200 hover:bg-blue-700"
               } ${!sidebarExpanded && "justify-center"}`}
@@ -383,9 +377,9 @@ export default function AdminProtectedLayout({
             </button>
 
             <button
-              onClick={() => navigateTo("/admin/dashboard/gestion-etu")}
+              onClick={() => navigateTo("/admin/dashboard/gestion-etudiants")}
               className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname.startsWith("/admin/gestion-etudiants")
+                pathname.startsWith("/admin/dashboard/gestion-etudiants")
                   ? "bg-blue-800 text-white font-semibold"
                   : "text-gray-200 hover:bg-blue-700"
               } ${!sidebarExpanded && "justify-center"}`}
@@ -397,7 +391,7 @@ export default function AdminProtectedLayout({
             <button
               onClick={() => navigateTo("/admin/dashboard/gestion-domaines")}
               className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname.startsWith("/admin/gestion-domaines")
+                pathname.startsWith("/admin/dashboard/gestion-domaines")
                   ? "bg-blue-800 text-white font-semibold"
                   : "text-gray-200 hover:bg-blue-700"
               } ${!sidebarExpanded && "justify-center"}`}
@@ -406,32 +400,23 @@ export default function AdminProtectedLayout({
               {sidebarExpanded && <span>Gestion Domaines</span>}
             </button>
 
-            <div className="relative">
-              <button
-                onClick={() =>
-                  navigateTo("/admin/dashboard/demande-formulaires")
-                }
-                className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                  pathname.startsWith("/admin/demandes-formulaires")
-                    ? "bg-blue-800 text-white font-semibold"
-                    : "text-gray-200 hover:bg-blue-700"
-                } ${!sidebarExpanded && "justify-center"}`}
-              >
-                <FileText size={iconSize} />
-                {sidebarExpanded && <span>Demandes Formulaires</span>}
-              </button>
-              {pendingRequestsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
-                  {pendingRequestsCount > 99 ? "99+" : pendingRequestsCount}
-                </span>
-              )}
-            </div>
+            <button
+              onClick={() => navigateTo("/admin/dashboard/demande-formulaires")}
+              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
+                pathname.startsWith("/admin/dashboard/demandes-formulaires")
+                  ? "bg-blue-800 text-white font-semibold"
+                  : "text-gray-200 hover:bg-blue-700"
+              } ${!sidebarExpanded && "justify-center"}`}
+            >
+              <FileText size={iconSize} />
+              {sidebarExpanded && <span>Demandes Formulaires</span>}
+            </button>
 
             <div className="relative">
               <button
                 onClick={() => navigateTo("/admin/dashboard/gestion-messages")}
                 className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                  pathname.startsWith("/admin/gestion-messages")
+                  pathname.startsWith("/admin/dashboard/gestion-messages")
                     ? "bg-blue-800 text-white font-semibold"
                     : "text-gray-200 hover:bg-blue-700"
                 } ${!sidebarExpanded && "justify-center"}`}
@@ -448,7 +433,7 @@ export default function AdminProtectedLayout({
           </div>
         </nav>
 
-        {/* Help + Déconnexion en bas */}
+        {/* Help & Logout */}
         <div className="px-4 pb-6 space-y-6">
           <div>
             <p
@@ -461,7 +446,7 @@ export default function AdminProtectedLayout({
             <button
               onClick={() => navigateTo("/admin/dashboard/documentation")}
               className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname === "/admin/documentation"
+                pathname === "/admin/dashboard/documentation"
                   ? "bg-blue-800 text-white font-semibold"
                   : "text-gray-200 hover:bg-blue-700"
               } ${!sidebarExpanded && "justify-center"}`}
@@ -483,6 +468,7 @@ export default function AdminProtectedLayout({
         </div>
       </aside>
 
+      {/* ── MAIN CONTENT ── */}
       <main
         className={`pt-20 transition-all duration-300 ${
           sidebarExpanded ? "ml-68" : "ml-20"
@@ -495,7 +481,7 @@ export default function AdminProtectedLayout({
         </div>
       </main>
 
-      {/* ── MODAL CHANGER MOT DE PASSE ── */}
+      {/* ── PASSWORD MODAL ── */}
       {passwordModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative">
@@ -562,7 +548,6 @@ export default function AdminProtectedLayout({
                 {isSavingPassword ? "Enregistrement..." : "Enregistrer"}
               </button>
 
-              {/* Success message under button */}
               {passwordToast && (
                 <div
                   className={`mt-4 p-4 rounded-lg text-white font-medium flex items-center gap-3 justify-center ${
@@ -580,7 +565,7 @@ export default function AdminProtectedLayout({
         </div>
       )}
 
-      {/* ── MODAL MODIFIER COORDONNÉES ── */}
+      {/* ── CONTACT / COORDONNÉES MODAL ── */}
       {contactModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative">
@@ -598,26 +583,29 @@ export default function AdminProtectedLayout({
               <p className="text-center py-10 text-gray-600">Chargement...</p>
             ) : (
               <form onSubmit={handleContactSave} className="space-y-5">
-                {/* Dynamic phones list */}
                 <div className="space-y-4">
                   <label className="block text-sm font-medium text-gray-700">
                     Numéros de téléphone
                   </label>
                   {phones.map((phone, index) => (
                     <div key={index} className="flex items-center gap-3">
-                      <input
-                        type="text"
+                      <PhoneInput
+                        international
+                        defaultCountry="DZ"
                         value={phone}
-                        onChange={(e) => updatePhone(index, e.target.value)}
-                        placeholder="+213123456789"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                        onChange={(value) => updatePhone(index, value || "")}
+                        className="flex-1 rounded-lg overflow-hidden shadow-sm"
+                        numberInputProps={{
+                          className:
+                            "w-full px-4 py-2 border border-gray-300 rounded-r-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:opacity-50 text-sm",
+                        }}
                         disabled={isSavingContact}
                       />
                       <button
                         type="button"
                         onClick={() => removePhone(index)}
                         className="text-red-600 hover:text-red-800"
-                        disabled={isSavingContact || phones.length === 1} // At least one phone
+                        disabled={isSavingContact}
                       >
                         <Trash2 size={20} />
                       </button>
@@ -626,7 +614,7 @@ export default function AdminProtectedLayout({
                   <button
                     type="button"
                     onClick={addPhone}
-                    className="flex items-center gap-2 text-blue-900 font-medium hover:text-blue-700"
+                    className="flex items-center gap-2 text-blue-900 font-medium hover:text-blue-700 disabled:opacity-50"
                     disabled={isSavingContact}
                   >
                     <Plus size={20} />
@@ -642,7 +630,7 @@ export default function AdminProtectedLayout({
                     type="email"
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
-                    className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
+                    className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50"
                     disabled={isSavingContact}
                   />
                 </div>
@@ -663,7 +651,6 @@ export default function AdminProtectedLayout({
                   {isSavingContact ? "Enregistrement..." : "Enregistrer"}
                 </button>
 
-                {/* Success message under button */}
                 {contactToast && (
                   <div
                     className={`mt-4 p-4 rounded-lg text-white font-medium flex items-center gap-3 justify-center ${
