@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   collection,
   onSnapshot,
@@ -138,6 +138,16 @@ export default function GestionEtudiants() {
   const [showFormationDropdown, setShowFormationDropdown] = useState(false);
   const [showWilayaDropdown, setShowWilayaDropdown] = useState(false);
 
+  // Modal dropdown controls
+  const [showModalWilayaDropdown, setShowModalWilayaDropdown] = useState(false);
+  const [showModalFormationDropdown, setShowModalFormationDropdown] =
+    useState(false);
+
+  // Only Formation will flip upward if needed
+  const [formationDropUp, setFormationDropUp] = useState(false);
+
+  const formationDropdownRef = useRef<HTMLDivElement>(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -151,6 +161,21 @@ export default function GestionEtudiants() {
     commune: "",
     dateNaissance: "",
   });
+
+  // Only check space for Formation dropdown
+  useEffect(() => {
+    if (!showModalFormationDropdown || !formationDropdownRef.current) return;
+
+    const rect = formationDropdownRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+
+    // If less than ~280px space, open upward
+    if (spaceBelow < 280) {
+      setFormationDropUp(true);
+    } else {
+      setFormationDropUp(false);
+    }
+  }, [showModalFormationDropdown]);
 
   useEffect(() => {
     const unsubEtudiants = onSnapshot(collection(db, "etudiants"), (snap) => {
@@ -256,9 +281,7 @@ export default function GestionEtudiants() {
       const isCurrentlyVisible = prev.includes(key);
       const visibleCount = prev.length;
 
-      if (isCurrentlyVisible && visibleCount === 1) {
-        return prev;
-      }
+      if (isCurrentlyVisible && visibleCount === 1) return prev;
 
       if (isCurrentlyVisible) {
         return prev.filter((k) => k !== key);
@@ -395,6 +418,9 @@ export default function GestionEtudiants() {
       commune: "",
       dateNaissance: "",
     });
+    setShowModalWilayaDropdown(false);
+    setShowModalFormationDropdown(false);
+    setFormationDropUp(false);
   };
 
   const getFormationTitle = (formationId: string) => {
@@ -502,7 +528,6 @@ export default function GestionEtudiants() {
               />
             </div>
 
-            {/* Toutes les formations */}
             <div className="relative inline-block text-left">
               <button
                 type="button"
@@ -523,11 +548,7 @@ export default function GestionEtudiants() {
               </button>
 
               {showFormationDropdown && (
-                <div
-                  className="
-                    absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30
-                  "
-                >
+                <div className="absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30">
                   <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
                     {formations.map((f) => (
                       <label
@@ -541,7 +562,6 @@ export default function GestionEtudiants() {
                             onChange={() => toggleFormation(f.id)}
                             className="peer h-5 w-5 appearance-none rounded-md border-2 border-gray-300 bg-white checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors group-hover:border-blue-400"
                           />
-                          {/* White checkmark when checked */}
                           <svg
                             className="pointer-events-none absolute h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
                             fill="none"
@@ -566,7 +586,6 @@ export default function GestionEtudiants() {
               )}
             </div>
 
-            {/* Toutes les wilayas */}
             <div className="relative inline-block text-left">
               <button
                 type="button"
@@ -587,11 +606,7 @@ export default function GestionEtudiants() {
               </button>
 
               {showWilayaDropdown && (
-                <div
-                  className="
-                    absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30
-                  "
-                >
+                <div className="absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30">
                   <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
                     {wilayas.map((w) => (
                       <label
@@ -605,7 +620,6 @@ export default function GestionEtudiants() {
                             onChange={() => toggleWilaya(w)}
                             className="peer h-5 w-5 appearance-none rounded-md border-2 border-gray-300 bg-white checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors group-hover:border-blue-400"
                           />
-                          {/* White checkmark when checked */}
                           <svg
                             className="pointer-events-none absolute h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
                             fill="none"
@@ -664,22 +678,7 @@ export default function GestionEtudiants() {
                 </button>
 
                 {showColumnDropdown && (
-                  <div
-                    className="
-                      absolute
-                      right-0
-                      top-full
-                      mt-2
-                      w-full
-                      min-w-[220px]
-                      bg-white
-                      rounded-xl
-                      shadow-2xl
-                      border border-gray-200
-                      overflow-hidden
-                      z-30
-                    "
-                  >
+                  <div className="absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30">
                     <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
                       {allColumns.map((col) => (
                         <label
@@ -927,6 +926,7 @@ export default function GestionEtudiants() {
                   <X size={28} />
                 </button>
               </div>
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <input
@@ -962,9 +962,13 @@ export default function GestionEtudiants() {
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Wilaya – always opens downward (like before) */}
                   <div className="relative inline-block text-left w-full">
                     <button
                       type="button"
+                      onClick={() =>
+                        setShowModalWilayaDropdown(!showModalWilayaDropdown)
+                      }
                       className="w-full px-6 py-4 pr-12 text-left border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
                     >
                       <span
@@ -974,9 +978,33 @@ export default function GestionEtudiants() {
                       >
                         {formData.wilaya || "Choisir une wilaya *"}
                       </span>
-                      <ChevronDown className="text-gray-500" size={20} />
+                      <ChevronDown
+                        className={`text-gray-500 transition-transform ${
+                          showModalWilayaDropdown ? "rotate-180" : ""
+                        }`}
+                        size={20}
+                      />
                     </button>
+
+                    {showModalWilayaDropdown && (
+                      <div className="absolute left-0 right-0 top-full mt-2 z-40 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-h-64 overflow-y-auto">
+                        {wilayas.map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, wilaya: w });
+                              setShowModalWilayaDropdown(false);
+                            }}
+                            className="w-full text-left px-5 py-3 hover:bg-blue-50 transition"
+                          >
+                            {w}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
                   <input
                     type="text"
                     placeholder="Commune"
@@ -1009,9 +1037,13 @@ export default function GestionEtudiants() {
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                 />
 
+                {/* Formation – can flip upward if near bottom */}
                 <div className="relative inline-block text-left w-full">
                   <button
                     type="button"
+                    onClick={() =>
+                      setShowModalFormationDropdown(!showModalFormationDropdown)
+                    }
                     className="w-full px-6 py-4 pr-12 text-left border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
                   >
                     <span
@@ -1019,10 +1051,44 @@ export default function GestionEtudiants() {
                         formData.formationId ? "text-gray-900" : "text-gray-500"
                       }
                     >
-                      {formData.formationId || "Choisir une formation *"}
+                      {formData.formationId
+                        ? getFormationTitle(formData.formationId)
+                        : "Choisir une formation *"}
                     </span>
-                    <ChevronDown className="text-gray-500" size={20} />
+                    <ChevronDown
+                      className={`text-gray-500 transition-transform ${
+                        showModalFormationDropdown ? "rotate-180" : ""
+                      }`}
+                      size={20}
+                    />
                   </button>
+
+                  {showModalFormationDropdown && (
+                    <div
+                      ref={formationDropdownRef}
+                      className={`
+                        absolute left-0 right-0 z-40
+                        ${
+                          formationDropUp ? "bottom-full mb-2" : "top-full mt-2"
+                        }
+                        bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-h-64 overflow-y-auto
+                      `}
+                    >
+                      {formations.map((f) => (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, formationId: f.id });
+                            setShowModalFormationDropdown(false);
+                          }}
+                          className="w-full text-left px-5 py-3 hover:bg-blue-50 transition"
+                        >
+                          {f.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-6 pt-6">

@@ -1,693 +1,203 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import {
-  signOut,
-  updatePassword,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-} from "firebase/auth";
-import {
-  onSnapshot,
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-} from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import Navbar from "@/components/NavBar";
+import Footer from "@/components/Footer";
+import CallToAction from "@/app/certification-iso/components/CallToAction";
 import Image from "next/image";
-import {
-  Menu,
-  UserCircle,
-  LogOut,
-  Settings,
-  LayoutDashboard,
-  BookOpen,
-  Users,
-  Mail,
-  HelpCircle,
-  FileText,
-  Briefcase,
-  X,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import Link from "next/link";
+import { Mail, Phone, Instagram, Facebook } from "lucide-react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-// Import the phone input library and its styles
-import PhoneInput from "react-phone-number-input";
-import "react-phone-number-input/style.css";
+export default function ContactPage() {
+  const [phones, setPhones] = useState<string[]>([]);
+  const [email, setEmail] = useState("cacegdz@yahoo.fr");
+  const [loading, setLoading] = useState(true);
 
-export default function AdminProtectedLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
-  const [profileOpen, setProfileOpen] = useState(false);
-
-  // Badges en temps réel
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
-  const [nonLusCount, setNonLusCount] = useState(0);
-
-  // ── Password modal states ──
-  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [pwdError, setPwdError] = useState("");
-  const [isSavingPassword, setIsSavingPassword] = useState(false);
-  const [passwordToast, setPasswordToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  // ── Contact / Coordonnées modal states ──
-  const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [phones, setPhones] = useState<string[]>([]); // Now stores E.164 strings (+213551234567, +33123456789, etc.)
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactError, setContactError] = useState("");
-  const [loadingContact, setLoadingContact] = useState(false);
-  const [isSavingContact, setIsSavingContact] = useState(false);
-  const [contactToast, setContactToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  // Vérification de session à chaque navigation (client-side)
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const res = await fetch("/api/auth-check", {
-          credentials: "include",
-        });
+    const docRef = doc(db, "settings", "contact");
 
-        const data = await res.json();
-
-        if (!res.ok || !data.valid) {
-          router.replace("/admin/session-expired");
+    const unsubscribe = onSnapshot(
+      docRef,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data() || {};
+          setPhones(data.phones || []);
+          setEmail(data.email || "cacegdz@yahoo.fr");
         }
-      } catch (error) {
-        router.replace("/admin/session-expired");
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Erreur onSnapshot contact:", err);
+        setLoading(false);
       }
-    };
+    );
 
-    checkSession();
-  }, [pathname, router]);
-
-  // Écoute en temps réel des demandes (inscriptions)
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "inscriptions"), (snapshot) => {
-      setPendingRequestsCount(snapshot.size);
-    });
-    return () => unsub();
+    return () => unsubscribe();
   }, []);
-
-  // Écoute en temps réel des messages non lus
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "messages"), (snapshot) => {
-      let count = 0;
-      snapshot.docs.forEach((doc) => {
-        if (!doc.data().lu) count++;
-      });
-      setNonLusCount(count);
-    });
-    return () => unsub();
-  }, []);
-
-  const loadContactSettings = async () => {
-    setLoadingContact(true);
-    setContactError("");
-
-    try {
-      const docRef = doc(db, "settings", "contact");
-      const snap = await getDoc(docRef);
-
-      if (snap.exists()) {
-        const data = snap.data() || {};
-        setPhones(data.phones || []); // Now expects E.164 strings
-        setContactEmail(data.email || "");
-      } else {
-        setContactError("Document non trouvé dans Firestore");
-      }
-    } catch (err: any) {
-      console.error("Erreur chargement coordonnées:", err);
-      setContactError("Erreur de chargement (réseau ou permissions)");
-    } finally {
-      setLoadingContact(false);
-    }
-  };
-
-  const addPhone = () => {
-    setPhones([...phones, ""]); // Empty string → user will select country and type number
-  };
-
-  const removePhone = (index: number) => {
-    const newPhones = phones.filter((_, i) => i !== index);
-    setPhones(newPhones);
-  };
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPwdError("");
-    setIsSavingPassword(true);
-
-    if (newPassword !== confirmPassword) {
-      setPwdError("Les mots de passe ne correspondent pas.");
-      setIsSavingPassword(false);
-      return;
-    }
-    if (newPassword.length < 6) {
-      setPwdError(
-        "Le nouveau mot de passe doit contenir au moins 6 caractères."
-      );
-      setIsSavingPassword(false);
-      return;
-    }
-
-    try {
-      const user = auth.currentUser;
-      if (!user || !user.email) {
-        setPwdError("Aucun utilisateur connecté.");
-        setIsSavingPassword(false);
-        return;
-      }
-
-      const credential = EmailAuthProvider.credential(
-        user.email,
-        currentPassword
-      );
-      await reauthenticateWithCredential(user, credential);
-
-      await updatePassword(user, newPassword);
-
-      setPasswordToast({
-        message: "Mot de passe modifié avec succès !",
-        type: "success",
-      });
-      setTimeout(() => setPasswordToast(null), 3500);
-
-      setTimeout(() => {
-        setPasswordModalOpen(false);
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      }, 2000);
-    } catch (err: any) {
-      if (err.code === "auth/wrong-password") {
-        setPwdError("Mot de passe actuel incorrect.");
-      } else if (err.code === "auth/requires-recent-login") {
-        setPwdError("Veuillez vous reconnecter pour cette opération.");
-      } else {
-        setPwdError(
-          err.message || "Erreur lors du changement de mot de passe."
-        );
-      }
-    } finally {
-      setIsSavingPassword(false);
-    }
-  };
-
-  const handleContactSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setContactError("");
-    setIsSavingContact(true);
-
-    try {
-      const docRef = doc(db, "settings", "contact");
-      await setDoc(
-        docRef,
-        {
-          phones, // Array of E.164 strings
-          email: contactEmail,
-        },
-        { merge: true }
-      );
-
-      setContactToast({
-        message: "Coordonnées mises à jour avec succès !",
-        type: "success",
-      });
-      setTimeout(() => setContactToast(null), 3500);
-
-      setTimeout(() => setContactModalOpen(false), 2000);
-    } catch (err) {
-      console.error("Erreur sauvegarde coordonnées:", err);
-      setContactError("Erreur lors de la sauvegarde des coordonnées.");
-    } finally {
-      setIsSavingContact(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/logout", { method: "POST" });
-      await signOut(auth);
-      router.push("/admin/login");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      router.push("/admin/login");
-    }
-  };
-
-  const navigateTo = (path: string) => {
-    router.push(path);
-  };
-
-  const iconSize = sidebarExpanded ? 22 : 28;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-gray-50/80 backdrop-blur-md flex items-center justify-between px-6 z-50 shadow-sm">
-        <div className="flex items-center gap-5">
-          <button
-            onClick={() => setSidebarExpanded(!sidebarExpanded)}
-            className="text-gray-700 hover:text-blue-900 transition cursor-pointer"
-          >
-            <Menu size={28} />
-          </button>
-          <div className="flex items-center">
-            <Image
-              src="/logos/caceg-admine.png"
-              alt="CACEG Admin Logo"
-              width={200}
-              height={60}
-              className="object-contain"
-              priority
-            />
-          </div>
+    <>
+      <Navbar />
+
+      {/* Hero */}
+      <section className="relative h-[70vh] min-h-[600px] flex items-center justify-center overflow-hidden">
+        <Image
+          src="/contact.jpg"
+          alt="Contact CACEG Formation"
+          fill
+          className="object-cover brightness-50"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40" />
+        <div className="relative z-10 text-center text-white px-6 max-w-4xl">
+          <h1 className="text-5xl md:text-7xl font-black mb-8 drop-shadow-2xl">
+            Contactez-nous
+          </h1>
+          <p className="text-2xl md:text-3xl drop-shadow-lg">
+            Nous sommes à votre écoute pour toutes vos questions
+          </p>
         </div>
+      </section>
 
-        <div className="relative">
-          <button
-            onClick={() => setProfileOpen(!profileOpen)}
-            className="flex items-center gap-3 text-gray-700 hover:text-blue-900 cursor-pointer"
-          >
-            <UserCircle size={36} className="text-blue-900" />
-          </button>
-
-          {profileOpen && (
-            <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-3 z-50">
-              <button
-                onClick={() => {
-                  setProfileOpen(false);
-                  setPasswordModalOpen(true);
-                }}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition text-left cursor-pointer"
-              >
-                <Settings size={18} />
-                Changer mot de passe
-              </button>
-
-              <button
-                onClick={() => {
-                  setProfileOpen(false);
-                  setContactModalOpen(true);
-                  loadContactSettings();
-                }}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition text-left cursor-pointer"
-              >
-                <Mail size={18} />
-                Modifier coordonnées
-              </button>
-
-              <hr className="my-2 border-gray-100" />
-
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 text-red-600 transition text-left cursor-pointer"
-              >
-                <LogOut size={18} />
-                Déconnexion
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed left-0 top-16 bottom-0 bg-blue-900 text-white transition-all duration-300 z-40 flex flex-col ${
-          sidebarExpanded ? "w-68" : "w-20"
-        }`}
-      >
-        <nav className="flex-1 py-6 px-4 space-y-6 overflow-y-auto">
-          {/* Principal */}
-          <div>
-            <p
-              className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${
-                !sidebarExpanded ? "text-center" : ""
-              }`}
-            >
-              {sidebarExpanded ? "Principal" : "..."}
-            </p>
-            <button
-              onClick={() => navigateTo("/admin/dashboard/acceuil")}
-              className={`w-full flex items-center gap-4 py-3 px-4 rounded-xl font-medium transition cursor-pointer ${
-                pathname === "/admin/dashboard/acceuil"
-                  ? "bg-blue-800 text-white font-semibold"
-                  : "text-gray-200 hover:bg-blue-700"
-              } ${!sidebarExpanded && "justify-center"}`}
-            >
-              <LayoutDashboard size={iconSize} />
-              {sidebarExpanded && <span>Dashboard</span>}
-            </button>
-          </div>
-
-          {/* Forms and Datas */}
-          <div>
-            <p
-              className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${
-                !sidebarExpanded ? "text-center" : ""
-              }`}
-            >
-              {sidebarExpanded ? "Forms and Datas" : "..."}
-            </p>
-
-            <button
-              onClick={() => navigateTo("/admin/dashboard/gestion-formations")}
-              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname.startsWith("/admin/gestion-formations")
-                  ? "bg-blue-800 text-white font-semibold"
-                  : "text-gray-200 hover:bg-blue-700"
-              } ${!sidebarExpanded && "justify-center"}`}
-            >
-              <BookOpen size={iconSize} />
-              {sidebarExpanded && <span>Gestion Formations</span>}
-            </button>
-
-            <button
-              onClick={() => navigateTo("/admin/dashboard/gestion-etu")}
-              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname.startsWith("/admin/gestion-etudiants")
-                  ? "bg-blue-800 text-white font-semibold"
-                  : "text-gray-200 hover:bg-blue-700"
-              } ${!sidebarExpanded && "justify-center"}`}
-            >
-              <Users size={iconSize} />
-              {sidebarExpanded && <span>Gestion Étudiants</span>}
-            </button>
-
-            <button
-              onClick={() => navigateTo("/admin/dashboard/gestion-domaines")}
-              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname.startsWith("/admin/gestion-domaines")
-                  ? "bg-blue-800 text-white font-semibold"
-                  : "text-gray-200 hover:bg-blue-700"
-              } ${!sidebarExpanded && "justify-center"}`}
-            >
-              <Briefcase size={iconSize} />
-              {sidebarExpanded && <span>Gestion Domaines</span>}
-            </button>
-
-            <div className="relative">
-              <button
-                onClick={() =>
-                  navigateTo("/admin/dashboard/demande-formulaires")
-                }
-                className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                  pathname.startsWith("/admin/demandes-formulaires")
-                    ? "bg-blue-800 text-white font-semibold"
-                    : "text-gray-200 hover:bg-blue-700"
-                } ${!sidebarExpanded && "justify-center"}`}
-              >
-                <FileText size={iconSize} />
-                {sidebarExpanded && <span>Demandes Formulaires</span>}
-              </button>
-              {pendingRequestsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
-                  {pendingRequestsCount > 99 ? "99+" : pendingRequestsCount}
-                </span>
-              )}
-            </div>
-
-            <div className="relative">
-              <button
-                onClick={() => navigateTo("/admin/dashboard/gestion-messages")}
-                className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                  pathname.startsWith("/admin/gestion-messages")
-                    ? "bg-blue-800 text-white font-semibold"
-                    : "text-gray-200 hover:bg-blue-700"
-                } ${!sidebarExpanded && "justify-center"}`}
-              >
-                <Mail size={iconSize} />
-                {sidebarExpanded && <span>Gestion Messages</span>}
-              </button>
-              {nonLusCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
-                  {nonLusCount > 99 ? "99+" : nonLusCount}
-                </span>
-              )}
-            </div>
-          </div>
-        </nav>
-
-        {/* Help + Déconnexion en bas */}
-        <div className="px-4 pb-6 space-y-6">
-          <div>
-            <p
-              className={`text-xs font-semibold uppercase tracking-wider mb-3 text-blue-200 ${
-                !sidebarExpanded ? "text-center" : ""
-              }`}
-            >
-              {sidebarExpanded ? "Help" : "..."}
-            </p>
-            <button
-              onClick={() => navigateTo("/admin/dashboard/documentation")}
-              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname === "/admin/documentation"
-                  ? "bg-blue-800 text-white font-semibold"
-                  : "text-gray-200 hover:bg-blue-700"
-              } ${!sidebarExpanded && "justify-center"}`}
-            >
-              <HelpCircle size={iconSize} />
-              {sidebarExpanded && <span>Documentation</span>}
-            </button>
-          </div>
-
-          <button
-            onClick={handleLogout}
-            className={`w-full flex items-center justify-center gap-3 py-4 bg-yellow-500 text-blue-900 font-bold rounded-xl hover:bg-yellow-400 transition shadow-lg cursor-pointer ${
-              !sidebarExpanded && "px-4"
-            }`}
-          >
-            <LogOut size={iconSize} />
-            {sidebarExpanded && <span>Déconnexion</span>}
-          </button>
-        </div>
-      </aside>
-
-      <main
-        className={`pt-20 transition-all duration-300 ${
-          sidebarExpanded ? "ml-68" : "ml-20"
-        }`}
-      >
-        <div className="px-8">
-          <div key={pathname} className="animate-in fade-in duration-500">
-            {children}
-          </div>
-        </div>
-      </main>
-
-      {/* ── MODAL CHANGER MOT DE PASSE ── */}
-      {passwordModalOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative">
-            <button
-              onClick={() => setPasswordModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
-            >
-              <X size={24} />
-            </button>
-            <h2 className="text-2xl font-bold text-blue-900 mb-6">
-              Changer le mot de passe
+      {/* Section contact */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-blue-900 mb-6">
+              Une question ? Un projet de formation ?
             </h2>
-
-            <form onSubmit={handlePasswordChange} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Mot de passe actuel
-                </label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
-                  required
-                  disabled={isSavingPassword}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Nouveau mot de passe
-                </label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
-                  required
-                  disabled={isSavingPassword}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Confirmer le nouveau mot de passe
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
-                  required
-                  disabled={isSavingPassword}
-                />
-              </div>
-
-              {pwdError && <p className="text-red-600 text-sm">{pwdError}</p>}
-
-              <button
-                type="submit"
-                disabled={isSavingPassword}
-                className={`w-full bg-blue-900 text-white py-3 rounded-lg font-semibold hover:bg-blue-800 transition ${
-                  isSavingPassword ? "opacity-70 cursor-not-allowed" : ""
-                }`}
-              >
-                {isSavingPassword ? "Enregistrement..." : "Enregistrer"}
-              </button>
-
-              {/* Success message under button */}
-              {passwordToast && (
-                <div
-                  className={`mt-4 p-4 rounded-lg text-white font-medium flex items-center gap-3 justify-center ${
-                    passwordToast.type === "success"
-                      ? "bg-green-600"
-                      : "bg-red-600"
-                  }`}
-                >
-                  {passwordToast.type === "success" ? "✓" : "✕"}{" "}
-                  {passwordToast.message}
-                </div>
-              )}
-            </form>
+            <p className="text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
+              L'équipe CACEG est à votre disposition pour répondre à toutes vos
+              demandes...
+            </p>
           </div>
-        </div>
-      )}
 
-      {/* ── MODAL MODIFIER COORDONNÉES ── */}
-      {contactModalOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl relative">
-            <button
-              onClick={() => setContactModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
-            >
-              <X size={24} />
-            </button>
-            <h2 className="text-2xl font-bold text-blue-900 mb-6">
-              Modifier coordonnées
-            </h2>
-
-            {loadingContact ? (
-              <p className="text-center py-10 text-gray-600">Chargement...</p>
-            ) : (
-              <form onSubmit={handleContactSave} className="space-y-5">
-                {/* Dynamic phones list – with international phone input */}
-                <div className="space-y-6">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Numéros de téléphone (internationaux)
-                  </label>
-
-                  {phones.map((phone, index) => (
-                    <div key={index} className="flex items-start gap-3">
-                      <div className="flex-1">
-                        <PhoneInput
-                          international
-                          countryCallingCodeEditable={false}
-                          defaultCountry="DZ"
-                          value={phone}
-                          onChange={(value) => {
-                            const newPhones = [...phones];
-                            newPhones[index] = value || "";
-                            setPhones(newPhones);
-                          }}
-                          placeholder="Entrez le numéro"
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => removePhone(index)}
-                        className="mt-2 text-red-600 hover:text-red-800"
-                        disabled={isSavingContact || phones.length === 1}
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={addPhone}
-                    className="flex items-center gap-2 text-blue-900 font-medium hover:text-blue-700"
-                    disabled={isSavingContact}
-                  >
-                    <Plus size={20} />
-                    Ajouter un numéro
-                  </button>
+          <div className="grid lg:grid-cols-2 gap-12 items-start mb-20">
+            {/* Left: Phones + Email */}
+            <div className="space-y-12">
+              {/* Téléphone – now shows all phones */}
+              <div className="block bg-white rounded-3xl shadow-2xl p-10 text-center hover:shadow-3xl hover:scale-105 transition-all duration-300">
+                <div className="w-20 h-20 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Phone size={36} className="text-blue-900" />
                 </div>
+                <h3 className="text-2xl font-bold text-blue-900 mb-4">
+                  Téléphone
+                </h3>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Email de contact
-                  </label>
-                  <input
-                    type="email"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-blue-500"
-                    disabled={isSavingContact}
+                {loading ? (
+                  <p className="text-lg text-gray-700">Chargement...</p>
+                ) : phones.length > 0 ? (
+                  <div className="space-y-2">
+                    {phones.map((phone, index) => (
+                      <p key={index} className="text-lg text-gray-700">
+                        {phone}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-lg text-gray-700">
+                    Aucun numéro disponible
+                  </p>
+                )}
+              </div>
+
+              {/* Email */}
+              <a
+                href={`mailto:${email}`}
+                className="block bg-white rounded-3xl shadow-2xl p-10 text-center hover:shadow-3xl hover:scale-105 transition-all duration-300"
+              >
+                <div className="w-20 h-20 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Mail size={36} className="text-blue-900" />
+                </div>
+                <h3 className="text-2xl font-bold text-blue-900 mb-4">Email</h3>
+                {loading ? (
+                  <p className="text-lg text-blue-900 font-medium">
+                    Chargement...
+                  </p>
+                ) : (
+                  <p className="text-lg text-blue-900 font-medium">{email}</p>
+                )}
+              </a>
+            </div>
+
+            {/* Droite : Google Maps */}
+            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden h-96 lg:h-full">
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1279.811975106305!2d0.08729965573730469!3d35.930499998352!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1283b1f8a5e5e5e5%3A0x5e5e5e5e5e5e5e5!2sW3JQ%2BRW%20Mostaganem%2C%20Alg%C3%A9rie!5e0!3m2!1sfr!2sdz!4v1700000000000!5m2!1sfr!2sdz"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Localisation CACEG Mostaganem"
+              ></iframe>
+            </div>
+          </div>
+
+          {/* Réseaux sociaux */}
+          <div className="text-center">
+            <h2 className="text-4xl font-bold text-blue-900 mb-10">
+              Suivez-nous sur les réseaux sociaux
+            </h2>
+            <div className="grid md:grid-cols-3 gap-12 max-w-4xl mx-auto">
+              <Link
+                href="https://instagram.com/caceg_formation"
+                target="_blank"
+                className="group"
+              >
+                <div className="w-28 h-28 bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl flex items-center justify-center shadow-2xl hover:scale-110 transition mx-auto">
+                  <Instagram
+                    size={52}
+                    className="text-white group-hover:drop-shadow-lg"
                   />
                 </div>
+                <p className="mt-6 text-xl font-medium text-gray-700">
+                  @caceg_formation
+                </p>
+              </Link>
 
-                {contactError && (
-                  <p className="text-red-600 text-sm">{contactError}</p>
-                )}
+              <Link
+                href="https://facebook.com/CACEG Formation"
+                target="_blank"
+                className="group"
+              >
+                <div className="w-28 h-28 bg-blue-600 rounded-3xl flex items-center justify-center shadow-2xl hover:scale-110 transition mx-auto">
+                  <Facebook size={52} className="text-white" />
+                </div>
+                <p className="mt-6 text-xl font-medium text-gray-700">
+                  CACEG Formation
+                </p>
+              </Link>
 
-                <button
-                  type="submit"
-                  disabled={isSavingContact || loadingContact}
-                  className={`w-full bg-blue-900 text-white py-3 rounded-lg font-semibold hover:bg-blue-800 transition ${
-                    isSavingContact || loadingContact
-                      ? "opacity-70 cursor-not-allowed"
-                      : ""
-                  }`}
-                >
-                  {isSavingContact ? "Enregistrement..." : "Enregistrer"}
-                </button>
-
-                {/* Success message under button */}
-                {contactToast && (
-                  <div
-                    className={`mt-4 p-4 rounded-lg text-white font-medium flex items-center gap-3 justify-center ${
-                      contactToast.type === "success"
-                        ? "bg-green-600"
-                        : "bg-red-600"
-                    }`}
-                  >
-                    {contactToast.type === "success" ? "✓" : "✕"}{" "}
-                    {contactToast.message}
-                  </div>
-                )}
-              </form>
-            )}
+              <Link
+                href="https://tiktok.com/@cacegformation"
+                target="_blank"
+                className="group"
+              >
+                <div className="w-28 h-28 bg-transparent rounded-3xl flex items-center justify-center shadow-2xl hover:scale-110 transition mx-auto">
+                  <Image
+                    src="/tiktok.png"
+                    alt="TikTok CACEG"
+                    width={100}
+                    height={100}
+                    className="object-contain"
+                  />
+                </div>
+                <p className="mt-6 text-xl font-medium text-gray-700">
+                  @cacegformation
+                </p>
+              </Link>
+            </div>
           </div>
         </div>
-      )}
-    </div>
+      </section>
+
+      <CallToAction />
+
+      <Footer />
+    </>
   );
 }
