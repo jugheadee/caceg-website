@@ -105,7 +105,7 @@ export default function ContactPage() {
                         <button
                           key={index}
                           onClick={() => handlePhoneClick(phone)}
-                          className="group px-5 text-lg md:text-xl font-medium text-blue-900 hover:text-blue-900 transition-colors duration-200 decoration-blue-400/60 rounded-lg hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2 "
+                          className="group px-5 text-lg md:text-xl font-medium text-blue-900 hover:text-blue-900 transition-colors duration-200 decoration-blue-400/60 rounded-lg hover:bg-blue-50/40 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2 "
                         >
                           {formatted}
                         </button>

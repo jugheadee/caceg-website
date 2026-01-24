@@ -61,6 +61,7 @@ export default function Footer() {
                 { label: "Formations", href: "/formations" },
                 { label: "Actualités", href: "/actualites" },
                 { label: "À propos", href: "/a-propos/presentation" },
+                { label: "Consulting", href: "/consulting" },
               ].map((item) => (
                 <li key={item.href}>
                   <Link

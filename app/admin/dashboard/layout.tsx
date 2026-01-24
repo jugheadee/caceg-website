@@ -377,7 +377,7 @@ export default function AdminProtectedLayout({
             </button>
 
             <button
-              onClick={() => navigateTo("/admin/dashboard/gestion-etudiants")}
+              onClick={() => navigateTo("/admin/dashboard/gestion-etu")}
               className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
                 pathname.startsWith("/admin/dashboard/gestion-etudiants")
                   ? "bg-blue-800 text-white font-semibold"
