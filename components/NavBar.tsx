@@ -31,9 +31,20 @@ export default function Navbar() {
     return () => unsub();
   }, []);
 
-  const activeLinkClass =
-    "relative after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-1 after:bg-yellow-500 after:rounded-full after:transition-all after:duration-300 after:ease-in-out after:scale-x-100";
-  const inactiveLinkClass = "after:scale-x-0";
+  // Trait actif ultra-fin, moderne et élégant (2px, animation douce)
+  const getActiveClass = (path: string) =>
+    pathname === path || pathname.startsWith(path)
+      ? "after:scale-x-100"
+      : "after:scale-x-0 hover:after:scale-x-100";
+
+  const linkClass = (isActive: boolean) =>
+    `relative px-4 border-l border-gray-300 first:border-l-0 transition-colors hover:text-amber-600
+     after:absolute after:bottom-[-2px] after:left-0 after:w-full after:h-[2px] after:bg-yellow-500 after:rounded-full 
+     after:transition-transform after:duration-300 after:ease-out after:origin-left ${
+       isActive
+         ? "after:scale-x-100"
+         : "after:scale-x-0 hover:after:scale-x-100"
+     }`;
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href);
@@ -55,27 +66,17 @@ export default function Navbar() {
 
         {/* Desktop Menu */}
         <ul className="hidden lg:flex items-center text-sm font-semibold uppercase text-gray-700 tracking-wider">
-          {/* Accueil */}
-          <li className="px-4 border-l border-gray-300 first:border-l-0">
-            <Link
-              href="/home"
-              className={`hover:text-amber-600 transition ${
-                pathname === "/" ? activeLinkClass : inactiveLinkClass
-              }`}
-            >
-              Accueil
-            </Link>
+          <li className={linkClass(pathname === "/home" || pathname === "/")}>
+            <Link href="/home">Accueil</Link>
           </li>
 
-          {/* A PROPOS dropdown */}
+          {/* A PROPOS avec sous-menu */}
           <li className="group relative px-4 border-l border-gray-300">
             <Link
               href="/a-propos"
-              className={`flex items-center gap-1 hover:text-amber-600 transition ${
-                pathname.startsWith("/a-propos")
-                  ? activeLinkClass
-                  : inactiveLinkClass
-              }`}
+              className={`flex items-center gap-1 ${getActiveClass(
+                "/a-propos"
+              )}`}
             >
               A propos ▼
             </Link>
@@ -101,15 +102,13 @@ export default function Navbar() {
             </div>
           </li>
 
-          {/* Formations dropdown – dynamic, max 4 */}
+          {/* Formations Dropdown */}
           <li className="group relative px-4 border-l border-gray-300">
             <Link
               href="/formations"
-              className={`flex items-center gap-1 hover:text-amber-600 transition ${
-                pathname.startsWith("/formations")
-                  ? activeLinkClass
-                  : inactiveLinkClass
-              }`}
+              className={`flex items-center gap-1 ${getActiveClass(
+                "/formations"
+              )}`}
             >
               Nos formations ▼
             </Link>
@@ -133,28 +132,26 @@ export default function Navbar() {
             </div>
           </li>
 
-          {/* Consulting */}
-          <li className="px-4 border-l border-gray-300">
+          <li className={`${linkClass(pathname === "/consulting")}`}>
             <Link
               href="/consulting"
-              className={`text-orange-600 hover:text-amber-600 font-bold transition ${
-                isActive("/consulting") ? activeLinkClass : inactiveLinkClass
-              }`}
+              className="text-orange-600 hover:text-amber-600  transition"
             >
               Consulting et accompagnement
             </Link>
           </li>
 
-          {/* Contact */}
-          <li className="px-4 border-l border-gray-300">
-            <Link
-              href="/contact"
-              className={`hover:text-amber-600 transition ${
-                isActive("/contact") ? activeLinkClass : inactiveLinkClass
-              }`}
-            >
-              Contact
-            </Link>
+          {/* Nouveau lien */}
+          <li
+            className={`${linkClass(
+              pathname === "/evenements" || pathname.startsWith("/evenements")
+            )}`}
+          >
+            <Link href="/evenements">Événements & Actualités</Link>
+          </li>
+
+          <li className={`${linkClass(pathname === "/contact")}`}>
+            <Link href="/contact">Contact</Link>
           </li>
         </ul>
 

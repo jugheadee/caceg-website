@@ -32,6 +32,7 @@ import {
   X,
   Plus,
   Trash2,
+  Calendar, // ← Nouvelle icône pour les événements
 } from "lucide-react";
 
 // Phone input
@@ -388,6 +389,7 @@ export default function AdminProtectedLayout({
               {sidebarExpanded && <span>Gestion Étudiants</span>}
             </button>
 
+            {/* Gestion Domaines de Compétence */}
             <button
               onClick={() => navigateTo("/admin/dashboard/gestion-domaines")}
               className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
@@ -400,17 +402,44 @@ export default function AdminProtectedLayout({
               {sidebarExpanded && <span>Gestion Domaines</span>}
             </button>
 
-            <button
-              onClick={() => navigateTo("/admin/dashboard/demande-formulaires")}
-              className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
-                pathname.startsWith("/admin/dashboard/demandes-formulaires")
-                  ? "bg-blue-800 text-white font-semibold"
-                  : "text-gray-200 hover:bg-blue-700"
-              } ${!sidebarExpanded && "justify-center"}`}
-            >
-              <FileText size={iconSize} />
-              {sidebarExpanded && <span>Demandes Formulaires</span>}
-            </button>
+            {/* NOUVEAU : Gestion Événements & Actualités */}
+            <div className="relative">
+              <button
+                onClick={() =>
+                  navigateTo("/admin/dashboard/gestion-evenements")
+                }
+                className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
+                  pathname.startsWith("/dashboard/gestion-evenements")
+                    ? "bg-blue-800 text-white font-semibold"
+                    : "text-gray-200 hover:bg-blue-700"
+                } ${!sidebarExpanded && "justify-center"}`}
+              >
+                <Calendar size={iconSize} />
+                {sidebarExpanded && <span>Gestion Événements</span>}
+              </button>
+            </div>
+
+            {/* Demandes Formulaires avec badge */}
+            <div className="relative">
+              <button
+                onClick={() =>
+                  navigateTo("/admin/dashboard/demande-formulaires")
+                }
+                className={`w-full flex items-center gap-4 py-3 px-4 rounded-lg transition cursor-pointer ${
+                  pathname.startsWith("/admin/dashboard/demande-formulaires")
+                    ? "bg-blue-800 text-white font-semibold"
+                    : "text-gray-200 hover:bg-blue-700"
+                } ${!sidebarExpanded && "justify-center"}`}
+              >
+                <FileText size={iconSize} />
+                {sidebarExpanded && <span>Demandes Formulaires</span>}
+              </button>
+              {pendingRequestsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
+                  {pendingRequestsCount > 99 ? "99+" : pendingRequestsCount}
+                </span>
+              )}
+            </div>
 
             <div className="relative">
               <button
