@@ -9,7 +9,6 @@ import Link from "next/link";
 import Footer from '@/components/Footer';
 import { Calendar, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 
-
 interface Evenement {
   id: string;
   titre: string;
@@ -29,7 +28,6 @@ export default function EvenementsPage() {
   const [filteredEvenements, setFilteredEvenements] = useState<Evenement[]>([]);
   const [activeFilter, setActiveFilter] = useState("Tous");
   const [expandedDescriptions, setExpandedDescriptions] = useState<{ [key: string]: boolean }>({});
-
 
   const [activePhotoIndices, setActivePhotoIndices] = useState<{ [key: string]: number }>({});
 
@@ -95,21 +93,21 @@ export default function EvenementsPage() {
       <Navbar />
       <div className="h-16 lg:h-20"></div>
 
-      {/* Hero */}
-      <section className="relative h-[35vh] min-h-[300px] flex items-center justify-center text-center text-white overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-950/75 via-blue-900/65 to-transparent z-10"></div>
+      {/* Hero – Image qui prend toute la largeur sans trop couper */}
+      <section className="relative h-[55vh] min-h-[600px] flex items-center justify-center text-center text-white overflow-hidden">
+        <div className="absolute inset-0  to-transparent z-10"></div>
         <Image
           src="/event.jpg"
           alt="Événements CACEG"
           fill
-          className="object-cover brightness-70"
+          className="object-cover object-center brightness-75" // object-cover pour remplir toute la largeur, object-center pour centrer (moins de coupe haut/bas)
           priority
         />
         <div className="relative z-20 px-6 max-w-5xl mx-auto">
-          <h1 className="text-3xl md:text-5xl font-extrabold mb-3 drop-shadow-2xl">
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-4 drop-shadow-2xl">
             Actualités CACEG
           </h1>
-          <p className="text-lg md:text-xl drop-shadow-xl">
+          <p className="text-xl md:text-2xl drop-shadow-xl">
             Formations, événements et réussites clients
           </p>
         </div>
@@ -228,42 +226,41 @@ export default function EvenementsPage() {
                     </div>
 
                     <p
-  className={`text-gray-700 text-base lg:text-lg leading-relaxed ${
-    expandedDescriptions[evt.id] ? "" : "line-clamp-5"
-  }`}
->
-  {evt.description}
-</p>
+                      className={`text-gray-700 text-base lg:text-lg leading-relaxed ${
+                        expandedDescriptions[evt.id] ? "" : "line-clamp-5"
+                      }`}
+                    >
+                      {evt.description}
+                    </p>
 
-{evt.description && evt.description.length > 200 && (
-  <button
-    onClick={() =>
-      setExpandedDescriptions((prev) => ({
-        ...prev,
-        [evt.id]: !prev[evt.id],
-      }))
-    }
-    className="
-      mt-4 inline-flex items-center gap-2
-      text-sm font-semibold
-      text-blue-900
-      bg-blue-50
-      px-4 py-2
-      rounded-full
-      hover:bg-blue-100
-      transition-all duration-300
-      group
-    "
-  >
-    <span>
-      {expandedDescriptions[evt.id] ? "Réduire" : "Lire la suite"}
-    </span>
-    <span className="transform transition-transform duration-300 group-hover:translate-x-1">
-      {expandedDescriptions[evt.id] ? "↑" : "→"}
-    </span>
-  </button>
-)}
-
+                    {evt.description && evt.description.length > 200 && (
+                      <button
+                        onClick={() =>
+                          setExpandedDescriptions((prev) => ({
+                            ...prev,
+                            [evt.id]: !prev[evt.id],
+                          }))
+                        }
+                        className="
+                          mt-4 inline-flex items-center gap-2
+                          text-sm font-semibold
+                          text-blue-900
+                          bg-blue-50
+                          px-4 py-2
+                          rounded-full
+                          hover:bg-blue-100
+                          transition-all duration-300
+                          group
+                        "
+                      >
+                        <span>
+                          {expandedDescriptions[evt.id] ? "Réduire" : "Lire la suite"}
+                        </span>
+                        <span className="transform transition-transform duration-300 group-hover:translate-x-1">
+                          {expandedDescriptions[evt.id] ? "↑" : "→"}
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </article>
               );

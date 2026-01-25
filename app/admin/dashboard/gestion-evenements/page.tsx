@@ -368,8 +368,8 @@ export default function GestionEvenements() {
                     <td className="px-6 py-4 text-gray-700">{evt.categorie}</td>
                     <td className="px-6 py-4">
                       <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          evt.statut === "Publié" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                        className={`px-4 py-2 rounded-full text-sm font-bold ${
+                          evt.statut === "Publié" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
                         }`}
                       >
                         {evt.statut}
@@ -455,8 +455,6 @@ export default function GestionEvenements() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none"
                   />
                 </div>
-
-                
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
@@ -626,18 +624,31 @@ export default function GestionEvenements() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Statut
-                  </label>
-                  <select
-                    value={formData.statut}
-                    onChange={(e) => setFormData({ ...formData, statut: e.target.value as "Brouillon" | "Publié" })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none"
-                  >
-                    <option value="Brouillon">Brouillon</option>
-                    <option value="Publié">Publié</option>
-                  </select>
+                {/* Nouveau bloc pour le statut (checkbox clair) */}
+                <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                  <div className="flex items-center gap-4 mb-3">
+                    <input
+                      type="checkbox"
+                      id="publishEvent"
+                      checked={formData.statut === "Publié"}
+                      onChange={(e) => setFormData({ ...formData, statut: e.target.checked ? "Publié" : "Brouillon" })}
+                      className="w-7 h-7 text-yellow-500 rounded focus:ring-yellow-500 border-gray-300 cursor-pointer"
+                    />
+                    <label htmlFor="publishEvent" className="text-2xl font-bold text-blue-900 cursor-pointer select-none">
+                      Publier cet événement
+                    </label>
+                  </div>
+                  <p className="text-base text-gray-700 ml-11">
+                    {formData.statut === "Publié" ? (
+                      <span className="text-green-600 font-semibold">
+                        ✓ L'événement sera visible immédiatement sur le site public (page Actualités).
+                      </span>
+                    ) : (
+                      <span className="text-gray-600">
+                        L'événement reste en Brouillon (invisible sur le site public).
+                      </span>
+                    )}
+                  </p>
                 </div>
 
                 <div className="flex gap-4">

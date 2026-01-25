@@ -47,10 +47,10 @@ export default function NosClients() {
       {/* Hero */}
       <section className="relative h-[50vh] min-h-[400px] flex items-center justify-center text-center text-white overflow-hidden">
         <Image
-          src="/references-hero.jpg" // Mets une photo pro ici
+          src="/clients1.jpg" 
           alt="Références CACEG"
           fill
-          className="object-cover brightness-[0.65]"
+          className="object-cover brightness-[0.65] object-[center_19%]"
           priority
         />
         <div className="relative z-10 px-6 max-w-4xl mx-auto">
@@ -58,7 +58,7 @@ export default function NosClients() {
             Nos Références
           </h1>
           <p className="text-xl md:text-2xl drop-shadow-lg max-w-3xl mx-auto">
-            Nos clients et partenaires depuis plus de 10 ans
+           Entreprises qui nous ont fait confiance
           </p>
         </div>
       </section>

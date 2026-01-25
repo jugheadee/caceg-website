@@ -27,7 +27,7 @@ import Image from "next/image";
 interface Domaine {
   id: string;
   title: string;
-  order?: number;
+  order: number;
 }
 
 export default function GestionDomaines() {
@@ -47,10 +47,13 @@ export default function GestionDomaines() {
 
   const [formData, setFormData] = useState({
     title: "",
-    order: "", // ← on le met en string pour pouvoir laisser vide
+    order: "",
   });
 
-  // Image globale (banner)
+  // Erreur dans le modal (beau bandeau rouge)
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Image globale
   const [globalImageUrl, setGlobalImageUrl] = useState<string>("");
   const [globalSelectedFile, setGlobalSelectedFile] = useState<File | null>(null);
   const [globalPreviewUrl, setGlobalPreviewUrl] = useState<string | null>(null);
@@ -119,7 +122,11 @@ export default function GestionDomaines() {
     } else {
       pages.push(1, 2);
       if (currentPage > 4) pages.push("...");
-      for (let i = Math.max(3, currentPage - 1); i <= Math.min(totalPages - 2, currentPage + 1); i++) {
+      for (
+        let i = Math.max(3, currentPage - 1);
+        i <= Math.min(totalPages - 2, currentPage + 1);
+        i++
+      ) {
         pages.push(i);
       }
       if (currentPage < totalPages - 3) pages.push("...");
@@ -144,14 +151,32 @@ export default function GestionDomaines() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null); // reset erreur
+
     if (!formData.title.trim()) {
-      alert("Veuillez entrer le domaine");
+      setFormError("Veuillez entrer le titre du domaine");
       return;
     }
 
-    const orderValue = formData.order.trim() === "" 
-      ? getNextOrder() 
-      : Number(formData.order);
+    let orderValue: number;
+    if (formData.order.trim() === "") {
+      orderValue = getNextOrder();
+    } else {
+      orderValue = Number(formData.order);
+      if (isNaN(orderValue) || orderValue < 1) {
+        setFormError("L'ordre doit être un nombre positif (≥ 1)");
+        return;
+      }
+    }
+
+    // Vérifier doublon d'ordre
+    const duplicate = allDomaines.find(
+      (d) => d.order === orderValue && d.id !== editingId
+    );
+    if (duplicate) {
+      setFormError(`L'ordre ${orderValue} est déjà utilisé par "${duplicate.title}". Choisissez un autre.`);
+      return;
+    }
 
     const dataToSave = {
       title: formData.title.trim(),
@@ -167,7 +192,7 @@ export default function GestionDomaines() {
       closeModal();
     } catch (error) {
       console.error("Erreur sauvegarde:", error);
-      alert("Erreur lors de la sauvegarde");
+      setFormError("Erreur lors de la sauvegarde. Réessayez.");
     }
   };
 
@@ -177,6 +202,7 @@ export default function GestionDomaines() {
       order: domaine.order?.toString() || "",
     });
     setEditingId(domaine.id);
+    setFormError(null);
     setShowModal(true);
   };
 
@@ -219,6 +245,7 @@ export default function GestionDomaines() {
     setShowModal(false);
     setEditingId(null);
     setFormData({ title: "", order: "" });
+    setFormError(null);
   };
 
   const handleGlobalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,7 +268,7 @@ export default function GestionDomaines() {
 
       await setDoc(
         doc(db, "global-settings", "consulting-banner"),
-        { url, updatedAt: new Date().toISOString(), filename: fileName },
+        { url, updatedAt: new Date().toISOString() },
         { merge: true }
       );
 
@@ -250,7 +277,7 @@ export default function GestionDomaines() {
       alert("Image globale mise à jour !");
     } catch (err) {
       console.error(err);
-      alert("Erreur upload");
+      alert("Erreur upload image globale");
     } finally {
       setGlobalUploading(false);
     }
@@ -451,45 +478,45 @@ export default function GestionDomaines() {
               )}
             </div>
 
-            <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center">
-              <input
-                type="file"
-                accept="image/*"
-                ref={globalFileInputRef}
-                onChange={handleGlobalFileChange}
-                className="hidden"
-              />
-              <button
-                onClick={() => globalFileInputRef.current?.click()}
-                className="mb-6 bg-blue-700 text-white px-8 py-4 rounded-xl hover:bg-blue-800 flex items-center gap-2 mx-auto"
-              >
-                <Edit size={20} /> Choisir image
-              </button>
+          <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center flex flex-col items-center justify-center min-h-96">
+  <input
+    type="file"
+    accept="image/*"
+    ref={globalFileInputRef}
+    onChange={handleGlobalFileChange}
+    className="hidden"
+  />
+  <button
+    onClick={() => globalFileInputRef.current?.click()}
+    className="mb-6 bg-blue-700 text-white px-8 py-4 rounded-xl hover:bg-blue-800 flex items-center gap-2"
+  >
+    <Edit size={20} /> Choisir image
+  </button>
 
-              {globalPreviewUrl && (
-                <Image
-                  src={globalPreviewUrl}
-                  alt="Aperçu"
-                  width={300}
-                  height={300}
-                  className="rounded-xl shadow mx-auto max-h-72 object-contain mb-6"
-                />
-              )}
+  {globalPreviewUrl && (
+    <Image
+      src={globalPreviewUrl}
+      alt="Aperçu"
+      width={300}
+      height={300}
+      className="rounded-xl shadow max-h-72 object-contain mb-6"
+    />
+  )}
 
-              {globalSelectedFile && (
-                <button
-                  onClick={handleGlobalUpload}
-                  disabled={globalUploading}
-                  className="bg-green-600 text-white px-10 py-4 rounded-xl hover:bg-green-700 disabled:opacity-60 font-bold"
-                >
-                  {globalUploading ? "Upload..." : "Enregistrer"}
-                </button>
-              )}
-            </div>
+  {globalSelectedFile && (
+    <button
+      onClick={handleGlobalUpload}
+      disabled={globalUploading}
+      className="bg-green-600 text-white px-10 py-4 rounded-xl hover:bg-green-700 disabled:opacity-60 font-bold"
+    >
+      {globalUploading ? "Upload..." : "Enregistrer"}
+    </button>
+  )}
+</div>
           </div>
         </div>
 
-        {/* Modal simplifié avec ordre automatique */}
+        {/* Modal avec bandeau rouge pour erreur */}
         {showModal && (
           <div
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
@@ -508,6 +535,14 @@ export default function GestionDomaines() {
                 </button>
               </div>
 
+              {/* Bandeau rouge pour erreur */}
+              {formError && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg flex items-center gap-3">
+                  <X size={24} className="text-red-700 flex-shrink-0" />
+                  <p className="font-medium">{formError}</p>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <textarea
                   placeholder="Entrez le domaine ici..."
@@ -521,11 +556,13 @@ export default function GestionDomaines() {
                 <div>
                   <h3 className="text-xl font-bold text-blue-900 mb-2">Ordre / Emplacement</h3>
                   <p className="text-sm text-gray-600 mb-3">
-                    Laissez vide pour ajouter automatiquement à la fin (après le dernier domaine).
+                    Laissez vide pour ajouter automatiquement à la fin.<br />
+                    L'ordre doit être un nombre positif et unique.
                   </p>
                   <input
                     type="number"
-                    placeholder=""
+                    min="1"
+                    placeholder="ex: 5"
                     value={formData.order}
                     onChange={(e) => setFormData({ ...formData, order: e.target.value })}
                     className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none"
