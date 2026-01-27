@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import {
   collection,
   onSnapshot,
@@ -99,7 +99,7 @@ interface Etudiant {
   wilaya: string;
   commune: string;
   dateNaissance: string;
-  dateInscription: any;
+  dateInscription: unknown; // ✅ plus de any
 }
 
 const allColumns = [
@@ -111,9 +111,24 @@ const allColumns = [
   { key: "formation", label: "Formation" },
 ];
 
+const getTime = (v: unknown): number => {
+  if (!v) return 0;
+
+  // Firestore Timestamp-like { toDate() }
+  if (typeof v === "object" && v !== null && "toDate" in v) {
+    const maybe = v as { toDate?: () => Date };
+    const d = maybe.toDate?.();
+    return d ? d.getTime() : 0;
+  }
+
+  // string/date/number
+  const d = new Date(v as any);
+  const t = d.getTime();
+  return Number.isNaN(t) ? 0 : t;
+};
+
 export default function GestionEtudiants() {
   const [allEtudiants, setAllEtudiants] = useState<Etudiant[]>([]);
-  const [etudiants, setEtudiants] = useState<Etudiant[]>([]);
   const [formations, setFormations] = useState<Formation[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -146,6 +161,7 @@ export default function GestionEtudiants() {
   // Only Formation will flip upward if needed
   const [formationDropUp, setFormationDropUp] = useState(false);
 
+  // ✅ On garde la ref sur le CONTENEUR du bouton formation
   const formationDropdownRef = useRef<HTMLDivElement>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -162,32 +178,17 @@ export default function GestionEtudiants() {
     dateNaissance: "",
   });
 
-  // Only check space for Formation dropdown
-  useEffect(() => {
-    if (!showModalFormationDropdown || !formationDropdownRef.current) return;
-
-    const rect = formationDropdownRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-
-    // If less than ~280px space, open upward
-    if (spaceBelow < 280) {
-      setFormationDropUp(true);
-    } else {
-      setFormationDropUp(false);
-    }
-  }, [showModalFormationDropdown]);
-
   useEffect(() => {
     const unsubEtudiants = onSnapshot(collection(db, "etudiants"), (snap) => {
       const data = snap.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Etudiant)
+        (d) => ({ id: d.id, ...d.data() } as Etudiant)
       );
       setAllEtudiants(data);
     });
 
     const unsubFormations = onSnapshot(collection(db, "formations"), (snap) => {
       const data = snap.docs.map(
-        (doc) => ({ id: doc.id, title: doc.data().title } as Formation)
+        (d) => ({ id: d.id, title: (d.data() as any).title } as Formation)
       );
       setFormations(data);
     });
@@ -198,7 +199,8 @@ export default function GestionEtudiants() {
     };
   }, []);
 
-  useEffect(() => {
+  // ✅ etudiants = dérivé (useMemo) → plus de setEtudiants dans useEffect
+  const etudiants = useMemo(() => {
     let filtered = allEtudiants;
 
     if (searchQuery.trim()) {
@@ -210,44 +212,28 @@ export default function GestionEtudiants() {
     }
 
     if (filterFormations.length > 0) {
-      filtered = filtered.filter((e) =>
-        filterFormations.includes(e.formationId)
-      );
+      filtered = filtered.filter((e) => filterFormations.includes(e.formationId));
     }
 
     if (filterWilayas.length > 0) {
       filtered = filtered.filter((e) => filterWilayas.includes(e.wilaya));
     }
 
-    filtered = [...filtered].sort((a, b) => {
-      if (sortBy === "dateDesc")
-        return (
-          new Date(
-            b.dateInscription?.toDate?.() || b.dateInscription || 0
-          ).getTime() -
-          new Date(
-            a.dateInscription?.toDate?.() || a.dateInscription || 0
-          ).getTime()
-        );
-      if (sortBy === "dateAsc")
-        return (
-          new Date(
-            a.dateInscription?.toDate?.() || a.dateInscription || 0
-          ).getTime() -
-          new Date(
-            b.dateInscription?.toDate?.() || b.dateInscription || 0
-          ).getTime()
-        );
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "dateDesc") return getTime(b.dateInscription) - getTime(a.dateInscription);
+      if (sortBy === "dateAsc") return getTime(a.dateInscription) - getTime(b.dateInscription);
       if (sortBy === "nameAsc")
         return `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`);
       if (sortBy === "nameDesc")
         return `${b.prenom} ${b.nom}`.localeCompare(`${a.prenom} ${a.nom}`);
       return 0;
     });
+  }, [allEtudiants, searchQuery, filterFormations, filterWilayas, sortBy]);
 
-    setEtudiants(filtered);
+  // ✅ Reset page quand filtres changent
+  useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterFormations, filterWilayas, sortBy, allEtudiants]);
+  }, [searchQuery, filterFormations, filterWilayas, sortBy]);
 
   const totalPages = Math.ceil(etudiants.length / itemsPerPage);
   const paginatedEtudiants = etudiants.slice(
@@ -257,7 +243,7 @@ export default function GestionEtudiants() {
 
   const getPageNumbers = () => {
     if (totalPages <= 1) return [];
-    const pages = [];
+    const pages: Array<number | "..."> = [];
     if (totalPages <= 7) {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
@@ -280,14 +266,10 @@ export default function GestionEtudiants() {
     setVisibleColumns((prev) => {
       const isCurrentlyVisible = prev.includes(key);
       const visibleCount = prev.length;
-
       if (isCurrentlyVisible && visibleCount === 1) return prev;
 
-      if (isCurrentlyVisible) {
-        return prev.filter((k) => k !== key);
-      } else {
-        return [...prev, key];
-      }
+      if (isCurrentlyVisible) return prev.filter((k) => k !== key);
+      return [...prev, key];
     });
   };
 
@@ -299,9 +281,7 @@ export default function GestionEtudiants() {
 
   const toggleWilaya = (wilaya: string) => {
     setFilterWilayas((prev) =>
-      prev.includes(wilaya)
-        ? prev.filter((w) => w !== wilaya)
-        : [...prev, wilaya]
+      prev.includes(wilaya) ? prev.filter((w) => w !== wilaya) : [...prev, wilaya]
     );
   };
 
@@ -378,6 +358,7 @@ export default function GestionEtudiants() {
       setEditMode(false);
       setShowConfirmDelete(false);
     } catch (error) {
+      console.error(error); // ✅ plus de warning unused
       alert("Erreur lors de la suppression");
       setShowConfirmDelete(false);
     }
@@ -388,10 +369,12 @@ export default function GestionEtudiants() {
   };
 
   const toggleSelect = (id: string) => {
-    const newSet = new Set(selectedIds);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
-    setSelectedIds(newSet);
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
   };
 
   const toggleSelectAll = () => {
@@ -424,7 +407,7 @@ export default function GestionEtudiants() {
   };
 
   const getFormationTitle = (formationId: string) => {
-    const f = formations.find((f) => f.id === formationId);
+    const f = formations.find((ff) => ff.id === formationId);
     return f ? f.title : "Aucune formation";
   };
 
@@ -446,9 +429,7 @@ export default function GestionEtudiants() {
       getFormationTitle(e.formationId),
     ]);
 
-    const csvContent = [headers, ...rows]
-      .map((row) => row.join(","))
-      .join("\n");
+    const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
     const blob = new Blob([`\uFEFF${csvContent}`], {
       type: "text/csv;charset=utf-8;",
     });
@@ -464,6 +445,20 @@ export default function GestionEtudiants() {
     setFilterFormations([]);
     setFilterWilayas([]);
     setSortBy("dateDesc");
+  };
+
+  // ✅ plus de setFormationDropUp dans useEffect → calcul au moment de l'ouverture
+  const toggleModalFormationDropdown = () => {
+    if (!showModalFormationDropdown) {
+      const rect = formationDropdownRef.current?.getBoundingClientRect();
+      const bottom = rect?.bottom ?? 0;
+      const spaceBelow = window.innerHeight - bottom;
+      setFormationDropUp(spaceBelow < 280);
+      setShowModalFormationDropdown(true);
+      return;
+    }
+    setShowModalFormationDropdown(false);
+    setFormationDropUp(false);
   };
 
   return (
@@ -515,10 +510,7 @@ export default function GestionEtudiants() {
         <div className="bg-white rounded-2xl shadow-md p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="relative">
-              <Search
-                className="absolute left-4 top-4 text-gray-400"
-                size={20}
-              />
+              <Search className="absolute left-4 top-4 text-gray-400" size={20} />
               <input
                 type="text"
                 placeholder="Rechercher par nom ou prénom..."
@@ -756,9 +748,7 @@ export default function GestionEtudiants() {
                 )}
 
                 <button
-                  onClick={() =>
-                    setCurrentPage(Math.min(totalPages, currentPage + 1))
-                  }
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
                   className="p-3 rounded-xl hover:bg-gray-100 disabled:opacity-50 transition"
                 >
@@ -784,6 +774,7 @@ export default function GestionEtudiants() {
                     />
                   </th>
                 )}
+
                 {visibleColumns.includes("nomComplet") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     <button
@@ -795,31 +786,37 @@ export default function GestionEtudiants() {
                     </button>
                   </th>
                 )}
+
                 {visibleColumns.includes("dateNaissance") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Date naissance
                   </th>
                 )}
+
                 {visibleColumns.includes("wilaya") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Wilaya
                   </th>
                 )}
+
                 {visibleColumns.includes("telephone") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Téléphone
                   </th>
                 )}
+
                 {visibleColumns.includes("email") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Email
                   </th>
                 )}
+
                 {visibleColumns.includes("formation") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Formation
                   </th>
                 )}
+
                 {editMode && (
                   <th className="px-6 py-5 text-right pr-10 text-gray-700 font-medium">
                     Actions
@@ -827,13 +824,11 @@ export default function GestionEtudiants() {
                 )}
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-100">
               {paginatedEtudiants.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={10}
-                    className="text-center py-16 text-gray-500 text-lg"
-                  >
+                  <td colSpan={10} className="text-center py-16 text-gray-500 text-lg">
                     Aucun étudiant trouvé avec les filtres actuels.
                   </td>
                 </tr>
@@ -841,10 +836,7 @@ export default function GestionEtudiants() {
                 paginatedEtudiants.map((e) => (
                   <tr key={e.id} className="hover:bg-gray-50 transition">
                     {editMode && (
-                      <td
-                        className="px-6 py-5"
-                        onClick={(ev) => ev.stopPropagation()}
-                      >
+                      <td className="px-6 py-5" onClick={(ev) => ev.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedIds.has(e.id)}
@@ -853,31 +845,33 @@ export default function GestionEtudiants() {
                         />
                       </td>
                     )}
+
                     {visibleColumns.includes("nomComplet") && (
                       <td className="px-6 py-5 font-medium text-gray-900">
                         {e.prenom} {e.nom}
                       </td>
                     )}
+
                     {visibleColumns.includes("dateNaissance") && (
                       <td className="px-6 py-5 text-gray-700">
                         {e.dateNaissance
-                          ? new Date(e.dateNaissance).toLocaleDateString(
-                              "fr-DZ"
-                            )
+                          ? new Date(e.dateNaissance).toLocaleDateString("fr-DZ")
                           : "-"}
                       </td>
                     )}
+
                     {visibleColumns.includes("wilaya") && (
                       <td className="px-6 py-5 text-gray-700">{e.wilaya}</td>
                     )}
+
                     {visibleColumns.includes("telephone") && (
-                      <td className="px-6 py-5 text-gray-700">
-                        {e.telephone || "-"}
-                      </td>
+                      <td className="px-6 py-5 text-gray-700">{e.telephone || "-"}</td>
                     )}
+
                     {visibleColumns.includes("email") && (
                       <td className="px-6 py-5 text-gray-700">{e.email}</td>
                     )}
+
                     {visibleColumns.includes("formation") && (
                       <td className="px-6 py-5">
                         <span className="inline-block px-4 py-2 bg-blue-100 text-blue-900 rounded-full text-sm font-medium">
@@ -885,6 +879,7 @@ export default function GestionEtudiants() {
                         </span>
                       </td>
                     )}
+
                     {editMode && (
                       <td
                         className="px-6 py-5 text-right pr-10"
@@ -919,10 +914,7 @@ export default function GestionEtudiants() {
                 <h2 className="text-3xl font-bold text-blue-900">
                   {editingId ? "Modifier l'étudiant" : "Nouvel étudiant"}
                 </h2>
-                <button
-                  onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-600"
-                >
+                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
                   <X size={28} />
                 </button>
               </div>
@@ -933,9 +925,7 @@ export default function GestionEtudiants() {
                     type="text"
                     placeholder="Prénom *"
                     value={formData.prenom}
-                    onChange={(e) =>
-                      setFormData({ ...formData, prenom: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
                     required
                     className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                   />
@@ -943,9 +933,7 @@ export default function GestionEtudiants() {
                     type="text"
                     placeholder="Nom *"
                     value={formData.nom}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nom: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                     required
                     className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                   />
@@ -954,28 +942,20 @@ export default function GestionEtudiants() {
                 <input
                   type="date"
                   value={formData.dateNaissance}
-                  onChange={(e) =>
-                    setFormData({ ...formData, dateNaissance: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, dateNaissance: e.target.value })}
                   required
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Wilaya – always opens downward (like before) */}
+                  {/* Wilaya */}
                   <div className="relative inline-block text-left w-full">
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowModalWilayaDropdown(!showModalWilayaDropdown)
-                      }
+                      onClick={() => setShowModalWilayaDropdown(!showModalWilayaDropdown)}
                       className="w-full px-6 py-4 pr-12 text-left border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
                     >
-                      <span
-                        className={
-                          formData.wilaya ? "text-gray-900" : "text-gray-500"
-                        }
-                      >
+                      <span className={formData.wilaya ? "text-gray-900" : "text-gray-500"}>
                         {formData.wilaya || "Choisir une wilaya *"}
                       </span>
                       <ChevronDown
@@ -1009,9 +989,7 @@ export default function GestionEtudiants() {
                     type="text"
                     placeholder="Commune"
                     value={formData.commune}
-                    onChange={(e) =>
-                      setFormData({ ...formData, commune: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
                     className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                   />
                 </div>
@@ -1020,9 +998,7 @@ export default function GestionEtudiants() {
                   type="tel"
                   placeholder="Téléphone"
                   value={formData.telephone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, telephone: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                 />
 
@@ -1030,20 +1006,16 @@ export default function GestionEtudiants() {
                   type="email"
                   placeholder="Email *"
                   value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                 />
 
-                {/* Formation – can flip upward if near bottom */}
-                <div className="relative inline-block text-left w-full">
+                {/* Formation (ref + dropUp) */}
+                <div ref={formationDropdownRef} className="relative inline-block text-left w-full">
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowModalFormationDropdown(!showModalFormationDropdown)
-                    }
+                    onClick={toggleModalFormationDropdown}
                     className="w-full px-6 py-4 pr-12 text-left border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
                   >
                     <span
@@ -1065,14 +1037,9 @@ export default function GestionEtudiants() {
 
                   {showModalFormationDropdown && (
                     <div
-                      ref={formationDropdownRef}
-                      className={`
-                        absolute left-0 right-0 z-40
-                        ${
-                          formationDropUp ? "bottom-full mb-2" : "top-full mt-2"
-                        }
-                        bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-h-64 overflow-y-auto
-                      `}
+                      className={`absolute left-0 right-0 z-40 ${
+                        formationDropUp ? "bottom-full mb-2" : "top-full mt-2"
+                      } bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-h-64 overflow-y-auto`}
                     >
                       {formations.map((f) => (
                         <button
@@ -1081,6 +1048,7 @@ export default function GestionEtudiants() {
                           onClick={() => {
                             setFormData({ ...formData, formationId: f.id });
                             setShowModalFormationDropdown(false);
+                            setFormationDropUp(false);
                           }}
                           className="w-full text-left px-5 py-3 hover:bg-blue-50 transition"
                         >

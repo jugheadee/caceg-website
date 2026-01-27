@@ -16,7 +16,6 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { ChevronRight } from "lucide-react";
 
 const slides = [
   {
@@ -216,12 +215,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-blue-900 mb-6">
-              Une formation réussie, un accès facile à l'emploi
+              {"Une formation réussie, un accès facile à l'emploi"}
             </h2>
             <p className="text-lg text-gray-700 mb-8">
-              CACEG a développé une large gamme de formations pour partager et
-              transmettre le savoir et les bonnes pratiques du management aux
-              salariés de chaque entreprise.
+              {"CACEG a développé une large gamme de formations pour partager et transmettre le savoir et les bonnes pratiques du management aux salariés de chaque entreprise."}
             </p>
             <p className="text-lg text-gray-700 mb-8">
               Toutes nos formations sont adaptables à vos besoins et contexte

@@ -45,7 +45,7 @@ export default function AProposPage() {
                 {/* Agrément premium */}
                 <div className="inline-block bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-8 border-yellow-500 px-8 py-5 rounded-xl shadow-md mb-10">
                   <p className="text-2xl lg:text-2xl font-bold text-blue-900">
-                    Agrément d'État n°1031 du 27 juillet 2011
+                    {"Agrément d'État n°1031 du 27 juillet 2011"}
                   </p>
                 </div>
 
@@ -177,7 +177,7 @@ export default function AProposPage() {
               </div>
               <h3 className="text-2xl lg:text-3xl font-bold text-blue-900 mb-4 text-center">Excellence</h3>
               <p className="text-gray-700 text-center leading-relaxed text-base lg:text-lg">
-                Nous visons l'excellence dans chaque formation et accompagnement, avec des contenus de haut niveau animés par des experts reconnus.
+                {"Nous visons l'excellence dans chaque formation et accompagnement, avec des contenus de haut niveau animés par des experts reconnus."}
               </p>
             </div>
 
@@ -201,7 +201,7 @@ export default function AProposPage() {
               </div>
               <h3 className="text-2xl lg:text-3xl font-bold text-blue-900 mb-4 text-center">Proximité</h3>
               <p className="text-gray-700 text-center leading-relaxed text-base lg:text-lg">
-                Accompagnement personnalisé, à l'écoute de vos besoins spécifiques pour un service sur mesure.
+                {"Accompagnement personnalisé, à l'écoute de vos besoins spécifiques pour un service sur mesure."}
               </p>
             </div>
           </div>

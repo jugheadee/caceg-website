@@ -10,7 +10,6 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
-  BookOpen,
   Users,
   Mail,
   Clock,
@@ -146,7 +145,7 @@ export default function AdminDashboard() {
         <h1 className="text-4xl md:text-5xl font-black mb-3">
           Bienvenue sur votre espace administrateur CACEG
         </h1>
-        <p className="text-xl opacity-90">Aujourd'hui, {today}</p>
+        <p className="text-xl opacity-90">{"Aujourd'hui, "}{today}</p>
         {totalEtudiants > 0 && (
           <p className="text-lg mt-3 opacity-80">
             {totalEtudiants} étudiant{totalEtudiants > 1 ? "s" : ""} inscrit

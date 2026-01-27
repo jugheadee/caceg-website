@@ -28,7 +28,7 @@ interface Evenement {
   imageUrl?: string;
   photos?: string[]; // ← Ajouté pour le slider
   statut: "Brouillon" | "Publié";
-  createdAt?: any;
+  createdAt?: unknown;
 }
 
 export default function GestionEvenements() {
@@ -512,7 +512,7 @@ export default function GestionEvenements() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Image de l'événement (couverture)
+                    {"Image de l'événement (couverture)"}
                   </label>
                   <input
                     type="file"
@@ -641,11 +641,11 @@ export default function GestionEvenements() {
                   <p className="text-base text-gray-700 ml-11">
                     {formData.statut === "Publié" ? (
                       <span className="text-green-600 font-semibold">
-                        ✓ L'événement sera visible immédiatement sur le site public (page Actualités).
+                        {"✓ L'événement sera visible immédiatement sur le site public (page Actualités)."}
                       </span>
                     ) : (
                       <span className="text-gray-600">
-                        L'événement reste en Brouillon (invisible sur le site public).
+                        {"L'événement reste en Brouillon (invisible sur le site public)."}
                       </span>
                     )}
                   </p>

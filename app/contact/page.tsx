@@ -98,7 +98,7 @@ export default function ContactPage() {
                 ) : phones.length > 0 ? (
                   <div className="mt-6 space-y-4 flex flex-col items-center">
                     {phones.map((phone, index) => {
-                      const cleanPhone = phone.replace(/\D/g, "");
+                      
                       const formatted = format(phone, "INTERNATIONAL") || phone;
 
                       return (

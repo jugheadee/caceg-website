@@ -8,14 +8,13 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  type Timestamp,
 } from "firebase/firestore";
-import { db, storage } from "@/lib/firebase"; // ← CHANGEMENT : on importe storage depuis firebase.ts
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // ← CHANGEMENT : imports Firebase Storage
+import { db, storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
   Edit,
   Download,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   Plus,
   Search,
@@ -43,7 +42,7 @@ interface Formation {
   prerequisites?: string;
   targetAudience?: string;
   dateCreation: any;
-  featured?: boolean; // Added for popular formations on home
+  featured?: boolean;
 }
 
 const allColumns = [
@@ -52,7 +51,7 @@ const allColumns = [
   { key: "duration", label: "Durée" },
   { key: "coursesCount", label: "Modules" },
   { key: "price", label: "Prix" },
-  { key: "featured", label: "Populaire (Accueil)" }, // Added column
+  { key: "featured", label: "Populaire (Accueil)" },
   { key: "dateCreation", label: "Date création" },
 ];
 
@@ -136,6 +135,25 @@ const generateSlug = (title: string): string => {
     .replace(/^-+|-+$/g, "");
 };
 
+const formatDateFrDZ = (value: Formation["dateCreation"]) => {
+  if (!value) return "";
+
+  // Firestore Timestamp
+  if (typeof value === "object" && "toDate" in value && typeof value.toDate === "function") {
+    return value.toDate().toLocaleDateString("fr-DZ");
+  }
+
+  // Date object
+  if (value instanceof Date) {
+    return value.toLocaleDateString("fr-DZ");
+  }
+
+  // string (ISO or other)
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("fr-DZ");
+};
+
 export default function GestionFormations() {
   const [allFormations, setAllFormations] = useState<Formation[]>([]);
   const [formations, setFormations] = useState<Formation[]>([]);
@@ -178,7 +196,7 @@ export default function GestionFormations() {
     objectives: "",
     prerequisites: "",
     targetAudience: "",
-    featured: false, // Added
+    featured: false,
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -197,7 +215,7 @@ export default function GestionFormations() {
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "formations"), (snap) => {
       const data = snap.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Formation)
+        (d) => ({ id: d.id, ...d.data() } as Formation)
       );
       setAllFormations(data);
     });
@@ -211,7 +229,7 @@ export default function GestionFormations() {
     if (searchQuery.trim()) {
       const terms = searchQuery.trim().toLowerCase().split(/\s+/);
       filtered = filtered.filter((f) => {
-        const titleLower = f.title.toLowerCase();
+        const titleLower = (f.title || "").toLowerCase();
         return terms.every((term) => titleLower.includes(term));
       });
     }
@@ -222,7 +240,7 @@ export default function GestionFormations() {
 
     if (filterFree) {
       filtered = filtered.filter((f) => {
-        const p = f.price.toLowerCase().trim();
+        const p = (f.price || "").toLowerCase().trim();
         return (
           p.includes("gratuit") ||
           p === "0" ||
@@ -234,30 +252,36 @@ export default function GestionFormations() {
 
     if (appliedPriceMin !== null || appliedPriceMax !== null) {
       filtered = filtered.filter((f) => {
-        const priceNum = parseFloat(f.price.replace(/[^0-9]/g, "")) || 0;
-        if (appliedPriceMin !== null && priceNum < appliedPriceMin)
-          return false;
-        if (appliedPriceMax !== null && priceNum > appliedPriceMax)
-          return false;
+        const priceNum = parseFloat((f.price || "").replace(/[^0-9]/g, "")) || 0;
+        if (appliedPriceMin !== null && priceNum < appliedPriceMin) return false;
+        if (appliedPriceMax !== null && priceNum > appliedPriceMax) return false;
         return true;
       });
     }
 
     filtered = [...filtered].sort((a, b) => {
-      if (sortBy === "dateDesc")
-        return (
-          new Date(
-            b.dateCreation?.toDate?.() || b.dateCreation || 0
-          ).getTime() -
-          new Date(a.dateCreation?.toDate?.() || a.dateCreation || 0).getTime()
-        );
-      if (sortBy === "dateAsc")
-        return (
-          new Date(
-            a.dateCreation?.toDate?.() || a.dateCreation || 0
-          ).getTime() -
-          new Date(b.dateCreation?.toDate?.() || b.dateCreation || 0).getTime()
-        );
+      const aTime = (() => {
+        const v = a.dateCreation;
+        if (!v) return 0;
+        if (typeof v === "object" && "toDate" in v && typeof v.toDate === "function")
+          return v.toDate().getTime();
+        if (v instanceof Date) return v.getTime();
+        const d = new Date(v);
+        return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+      })();
+
+      const bTime = (() => {
+        const v = b.dateCreation;
+        if (!v) return 0;
+        if (typeof v === "object" && "toDate" in v && typeof v.toDate === "function")
+          return v.toDate().getTime();
+        if (v instanceof Date) return v.getTime();
+        const d = new Date(v);
+        return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+      })();
+
+      if (sortBy === "dateDesc") return bTime - aTime;
+      if (sortBy === "dateAsc") return aTime - bTime;
       if (sortBy === "titleAsc") return a.title.localeCompare(b.title);
       if (sortBy === "titleDesc") return b.title.localeCompare(a.title);
       return 0;
@@ -283,7 +307,7 @@ export default function GestionFormations() {
 
   const getPageNumbers = () => {
     if (totalPages <= 1) return [];
-    const pages = [];
+    const pages: Array<number | "..."> = [];
     if (totalPages <= 7) {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
@@ -349,10 +373,6 @@ export default function GestionFormations() {
     setFilterFree(false);
     setShowPriceDropdown(false);
   };
-
-  // ────────────────────────────────────────────────────────────────
-  // CHANGEMENT PRINCIPAL : upload image vers Firebase Storage
-  // ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -373,23 +393,14 @@ export default function GestionFormations() {
 
     if (selectedFile) {
       try {
-        // 1. Créer un nom unique pour le fichier
-        const fileName = `${Date.now()}_${selectedFile.name.replace(
-          /\s+/g,
-          "_"
-        )}`;
-
-        // 2. Créer la référence dans le dossier "formations/"
+        const fileName = `${Date.now()}_${selectedFile.name.replace(/\s+/g, "_")}`;
         const storageRef = ref(storage, `formations/${fileName}`);
-
-        // 3. Uploader le fichier
         const snapshot = await uploadBytes(storageRef, selectedFile);
-
-        // 4. Récupérer l'URL publique
         imageUrl = await getDownloadURL(snapshot.ref);
-
+        // eslint-disable-next-line no-console
         console.log("Image uploaded to Firebase:", imageUrl);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error("Erreur upload Firebase Storage:", error);
         alert("Erreur lors du téléchargement de l'image sur Firebase");
         setUploading(false);
@@ -421,6 +432,7 @@ export default function GestionFormations() {
       }
       closeModal();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("Erreur sauvegarde formation:", error);
       alert("Erreur lors de la sauvegarde de la formation");
     } finally {
@@ -440,7 +452,7 @@ export default function GestionFormations() {
       objectives: formation.objectives || "",
       prerequisites: formation.prerequisites || "",
       targetAudience: formation.targetAudience || "",
-      featured: formation.featured || false, // Added
+      featured: formation.featured || false,
     });
     setPreviewImage(formation.image || null);
     setSelectedFile(null);
@@ -462,7 +474,7 @@ export default function GestionFormations() {
       setSelectedIds(new Set());
       setEditMode(false);
       setShowConfirmDelete(false);
-    } catch (error) {
+    } catch (_error) {
       alert("Erreur lors de la suppression");
       setShowConfirmDelete(false);
     }
@@ -509,7 +521,8 @@ export default function GestionFormations() {
   const getInstructorOptions = () => {
     const instructors = Array.from(
       new Set(allFormations.map((f) => f.instructor))
-    );
+    ).filter(Boolean);
+
     return [
       { value: "", label: "Tous les instructeurs" },
       ...instructors.map((i) => ({ value: i, label: i })),
@@ -533,9 +546,7 @@ export default function GestionFormations() {
       f.coursesCount || "",
       f.price,
       f.featured ? "Oui" : "Non",
-      f.dateCreation
-        ? new Date(f.dateCreation).toLocaleDateString("fr-DZ")
-        : "",
+      formatDateFrDZ(f.dateCreation),
     ]);
     const csvContent =
       "data:text/csv;charset=utf-8," +
@@ -552,18 +563,17 @@ export default function GestionFormations() {
   const handleToggleFeatured = async (formation: Formation) => {
     const currentFeaturedCount = formations.filter((f) => f.featured).length;
 
-    // If trying to ADD featured (i.e. currently not featured) and we're at max
     if (!formation.featured && currentFeaturedCount >= MAX_FEATURED) {
       setShowFeaturedLimitModal(true);
-      return; // ← stop here, don't toggle
+      return;
     }
 
-    // Normal toggle if under limit or removing one
     try {
       await updateDoc(doc(db, "formations", formation.id), {
         featured: !formation.featured,
       });
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("Erreur lors du toggle featured:", error);
       alert("Une erreur est survenue lors de la mise à jour.");
     }
@@ -586,7 +596,6 @@ export default function GestionFormations() {
               Nouvelle formation
             </button>
 
-            {/* Conditional: show either Export or Supprimer */}
             {editMode && selectedIds.size > 0 ? (
               <button
                 onClick={handleBatchDelete}
@@ -693,6 +702,7 @@ export default function GestionFormations() {
                       <Check size={18} className="text-blue-900" />
                     )}
                 </button>
+
                 <button
                   type="button"
                   onClick={selectFree}
@@ -701,6 +711,7 @@ export default function GestionFormations() {
                   Gratuit uniquement
                   {filterFree && <Check size={18} className="text-blue-900" />}
                 </button>
+
                 <div className="space-y-4">
                   <p className="font-medium text-gray-700">Plage de prix</p>
                   <div className="grid grid-cols-2 gap-4">
@@ -790,6 +801,7 @@ export default function GestionFormations() {
                     />
                   </th>
                 )}
+
                 {visibleColumns.includes("title") && (
                   <th
                     onClick={handleTitleSort}
@@ -799,36 +811,43 @@ export default function GestionFormations() {
                     <ArrowUpDown size={16} />
                   </th>
                 )}
+
                 {visibleColumns.includes("instructor") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Instructeur
                   </th>
                 )}
+
                 {visibleColumns.includes("duration") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Durée
                   </th>
                 )}
+
                 {visibleColumns.includes("coursesCount") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Modules
                   </th>
                 )}
+
                 {visibleColumns.includes("price") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Prix
                   </th>
                 )}
+
                 {visibleColumns.includes("featured") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Populaire (Accueil)
                   </th>
                 )}
+
                 {visibleColumns.includes("dateCreation") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Date création
                   </th>
                 )}
+
                 {editMode && (
                   <th className="px-6 py-5 text-right pr-10 text-gray-700 font-medium">
                     Actions
@@ -836,6 +855,7 @@ export default function GestionFormations() {
                 )}
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-100">
               {paginatedFormations.length === 0 ? (
                 <tr>
@@ -862,26 +882,31 @@ export default function GestionFormations() {
                         />
                       </td>
                     )}
+
                     {visibleColumns.includes("title") && (
                       <td className="px-6 py-5 font-medium text-gray-900">
                         {f.title}
                       </td>
                     )}
+
                     {visibleColumns.includes("instructor") && (
                       <td className="px-6 py-5 text-gray-700">
                         {f.instructor}
                       </td>
                     )}
+
                     {visibleColumns.includes("duration") && (
                       <td className="px-6 py-5 text-gray-700">
                         {f.duration || "-"}
                       </td>
                     )}
+
                     {visibleColumns.includes("coursesCount") && (
                       <td className="px-6 py-5 text-gray-700">
                         {f.coursesCount || "-"}
                       </td>
                     )}
+
                     {visibleColumns.includes("price") && (
                       <td className="px-6 py-5">
                         <span className="inline-block px-4 py-2 bg-green-100 text-green-900 rounded-full text-sm font-medium">
@@ -889,6 +914,7 @@ export default function GestionFormations() {
                         </span>
                       </td>
                     )}
+
                     {visibleColumns.includes("featured") && (
                       <td className="px-6 py-5 text-center">
                         <button
@@ -904,21 +930,17 @@ export default function GestionFormations() {
                               : "Ajouter aux formations populaires"
                           }
                         >
-                          {f.featured ? (
-                            <Eye size={24} />
-                          ) : (
-                            <EyeOff size={24} />
-                          )}
+                          {f.featured ? <Eye size={24} /> : <EyeOff size={24} />}
                         </button>
                       </td>
                     )}
+
                     {visibleColumns.includes("dateCreation") && (
                       <td className="px-6 py-5 text-gray-700">
-                        {f.dateCreation
-                          ? new Date(f.dateCreation).toLocaleDateString("fr-DZ")
-                          : "Invalid Date"}
+                        {formatDateFrDZ(f.dateCreation) || "Invalid Date"}
                       </td>
                     )}
+
                     {editMode && (
                       <td
                         className="px-6 py-5 text-right pr-10"
@@ -938,6 +960,50 @@ export default function GestionFormations() {
               )}
             </tbody>
           </table>
+
+          {/* Pagination (utilise getPageNumbers -> plus de warning unused) */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 py-6">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-lg border bg-white disabled:opacity-50"
+              >
+                Précédent
+              </button>
+
+              {getPageNumbers().map((p, idx) =>
+                p === "..." ? (
+                  <span key={`dots-${idx}`} className="px-3 text-gray-500">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setCurrentPage(Number(p))}
+                    className={`px-4 py-2 rounded-lg border ${
+                      currentPage === p ? "bg-blue-900 text-white" : "bg-white"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 rounded-lg border bg-white disabled:opacity-50"
+              >
+                Suivant
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Modal */}
@@ -961,6 +1027,7 @@ export default function GestionFormations() {
                   <X size={28} />
                 </button>
               </div>
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <input
                   type="text"
@@ -1053,9 +1120,10 @@ export default function GestionFormations() {
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition min-h-[100px]"
                 />
 
-                {/* Upload Image – partie modifiée pour Firebase */}
+                {/* Upload Image */}
                 <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     onChange={(e) => {
@@ -1068,32 +1136,35 @@ export default function GestionFormations() {
                     className="hidden"
                     id="imageUpload"
                   />
-                  <label htmlFor="imageUpload" className="cursor-pointer block">
-                    <div className="flex flex-col items-center gap-2">
-                      <Image
-                        src={
-                          previewImage ||
-                          formData.image ||
-                          "/placeholder-image.png"
-                        }
-                        alt="Preview"
-                        width={200}
-                        height={200}
-                        className="rounded-xl object-cover"
-                      />
-                      <p className="text-gray-600 font-medium">
-                        Télécharger une image
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        PNG, JPG, GIF – max 5MB
-                      </p>
-                    </div>
-                  </label>
+
+                  <div className="flex flex-col items-center gap-2">
+                    <Image
+                      src={previewImage || formData.image || "/placeholder-image.png"}
+                      alt="Preview"
+                      width={200}
+                      height={200}
+                      className="rounded-xl object-cover"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mt-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold px-4 py-2 rounded-lg transition"
+                    >
+                      Choisir une image
+                    </button>
+
+                    <p className="text-sm text-gray-500">
+                      PNG, JPG, GIF – max 5MB
+                    </p>
+                  </div>
+
                   {selectedFile && (
                     <p className="mt-2 text-sm text-gray-600">
                       Fichier sélectionné : {selectedFile.name}
                     </p>
                   )}
+
                   {editingId && formData.image && !selectedFile && (
                     <p className="mt-2 text-sm text-gray-600">
                       Image actuelle conservée
@@ -1114,6 +1185,7 @@ export default function GestionFormations() {
                       ? "Modifier"
                       : "Ajouter"}
                   </button>
+
                   <button
                     type="button"
                     onClick={closeModal}
@@ -1159,7 +1231,6 @@ export default function GestionFormations() {
         {showFeaturedLimitModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
-              {/* ← Add the icon here */}
               <div className="flex justify-center mb-4">
                 <AlertTriangle size={48} className="text-yellow-500" />
               </div>
@@ -1167,11 +1238,15 @@ export default function GestionFormations() {
               <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
                 Limite atteinte
               </h3>
+
+              {/* ✅ Fix react/no-unescaped-entities (apostrophe) */}
               <p className="text-gray-600 text-center mb-8">
                 Vous avez déjà <strong>{MAX_FEATURED}</strong> formations mises
-                en avant sur la page d'accueil !<br />
-                Pour en ajouter une nouvelle, retirez-en une d'abord.
+                en avant sur la page d&apos;accueil !
+                <br />
+                Pour en ajouter une nouvelle, retirez-en une d&apos;abord.
               </p>
+
               <div className="flex gap-4">
                 <button
                   onClick={() => setShowFeaturedLimitModal(false)}

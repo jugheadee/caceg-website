@@ -5,7 +5,6 @@ import { collection, onSnapshot, query, where, orderBy } from "firebase/firestor
 import { db } from "@/lib/firebase";
 import Navbar from '@/components/NavBar';
 import Image from 'next/image';
-import Link from "next/link";
 import Footer from '@/components/Footer';
 import { Calendar, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 

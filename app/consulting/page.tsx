@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot, orderBy, query, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Footer from '@/components/Footer';
-import { ChevronRight } from "lucide-react";
+
 
 interface Domaine {
   id: string;
@@ -72,8 +72,7 @@ export default function ConsultingPage() {
             Consulting & Accompagnement
           </h1>
           <p className="text-xl md:text-2xl max-w-3xl mx-auto">
-            Votre partenaire stratégique pour l'excellence opérationnelle et la
-            performance durable
+            {"Votre partenaire stratégique pour l'excellence opérationnelle et la performance durable"}
           </p>
         </div>
       </section>
@@ -87,15 +86,10 @@ export default function ConsultingPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
               <p className="text-lg text-gray-700 mb-6">
-                Notre mission est d'accompagner les entreprises et les
-                organisations dans leurs démarches d'amélioration continue et de
-                recherche de la performance.
+                {"Notre mission est d'accompagner les entreprises et les organisations dans leurs démarches d'amélioration continue et de recherche de la performance."}
               </p>
               <p className="text-lg text-gray-700 mb-6">
-                À travers l'accès à une certification ISO, le déploiement de
-                l'Excellence Opérationnelle, une gestion efficace des projets et
-                un management des domaines variés, CACEG Consulting dispose de
-                compétences permettant d'intervenir dans tous les domaines.
+                {"À travers l'accès à une certification ISO, le déploiement de l'Excellence Opérationnelle, une gestion efficace des projets et un management des domaines variés, CACEG Consulting dispose de compétences permettant d'intervenir dans tous les domaines."}
               </p>
               <Link
                 href="/contact"
@@ -176,10 +170,10 @@ export default function ConsultingPage() {
             Accompagnement certification ISO
           </h2>
           <p className="text-xl text-gray-700 max-w-4xl mx-auto mb-12">
-            Engagez votre organisation dans une démarche de certification ISO.
-            CACEG Consulting vous accompagne jusqu'à la certification de votre
-            système, vous proposant l'externalisation de la gestion de votre
-            système une fois la certification acquise.
+            {"Engagez votre organisation dans une démarche de certification ISO. "}
+{"CACEG Consulting vous accompagne jusqu'à la certification de votre "}
+            {"système, vous proposant l'externalisation de la gestion de votre "}
+            {"système une fois la certification acquise."}
           </p>
           <div className="flex justify-center mb-12">
             <Image
@@ -207,9 +201,7 @@ export default function ConsultingPage() {
               Gestion de projet
             </h2>
             <p className="text-lg text-gray-700 mb-6">
-              Sécurisez votre projet depuis son démarrage jusqu'à sa livraison.
-              CACEG Consulting se positionne comme un réel partenaire en vous
-              accompagnant tout au long des phases de votre projet.
+              {"Sécurisez votre projet depuis son démarrage jusqu'à sa livraison. CACEG Consulting se positionne comme un réel partenaire en vous accompagnant tout au long des phases de votre projet."}
             </p>
             <Link
               href="/contact"

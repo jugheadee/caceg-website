@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import Navbar from '@/components/NavBar';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import Navbar from "@/components/NavBar";
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState, useMemo } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import Footer from '@/components/Footer';
+import Footer from "@/components/Footer";
 import { Search, Download } from "lucide-react";
 
 interface Formation {
@@ -22,48 +22,57 @@ const ITEMS_PER_PAGE = 6;
 
 export default function FormationsPage() {
   const [formations, setFormations] = useState<Formation[]>([]);
-  const [filteredFormations, setFilteredFormations] = useState<Formation[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Chargement des formations depuis Firestore
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "formations"), (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      } as Formation));
-      setFormations(data);
-      setFilteredFormations(data);
-      setLoading(false);
-    }, (error) => {
-      console.error("Erreur chargement formations:", error);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      collection(db, "formations"),
+      (snapshot) => {
+        const data = snapshot.docs.map(
+          (docSnap) =>
+            ({
+              id: docSnap.id,
+              ...docSnap.data(),
+            } as Formation)
+        );
+        setFormations(data);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Erreur chargement formations:", error);
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
 
-  // Filtre par recherche
+  // ✅ Filtre dérivé (pas de state)
+  const filteredFormations = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return formations;
+
+    return formations.filter((f) => {
+      const title = (f.title || "").toLowerCase();
+      const desc = (f.description || "").toLowerCase();
+      return title.includes(q) || desc.includes(q);
+    });
+  }, [formations, searchQuery]);
+
+  // ✅ Reset page quand recherche change / données changent
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredFormations(formations);
-    } else {
-      const query = searchQuery.toLowerCase();
-      setFilteredFormations(
-        formations.filter((f) =>
-          f.title.toLowerCase().includes(query) ||
-          f.description.toLowerCase().includes(query)
-        )
-      );
-    }
-    setCurrentPage(1); // reset page quand on recherche
+    setCurrentPage(1);
   }, [searchQuery, formations]);
 
   const totalPages = Math.ceil(filteredFormations.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentFormations = filteredFormations.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const currentFormations = filteredFormations.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE
+  );
 
   const handlePrev = () => setCurrentPage((p) => Math.max(1, p - 1));
   const handleNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
@@ -72,7 +81,7 @@ export default function FormationsPage() {
     return (
       <main className="min-h-screen bg-white">
         <Navbar />
-        <div className="h-16 lg:h-20"></div>
+        <div className="h-16 lg:h-20" />
         <div className="flex items-center justify-center min-h-screen">
           <p className="text-2xl text-blue-900">Chargement des formations...</p>
         </div>
@@ -83,9 +92,9 @@ export default function FormationsPage() {
   return (
     <main className="min-h-screen bg-white">
       <Navbar />
-      <div className="h-16 lg:h-20"></div>
+      <div className="h-16 lg:h-20" />
 
-      {/* Hero – inchangé */}
+      {/* Hero */}
       <section className="relative h-[70vh] min-h-[600px] flex items-center justify-center text-center text-white overflow-hidden">
         <Image
           src="/formation-hero.jpg"
@@ -99,12 +108,13 @@ export default function FormationsPage() {
             Toutes Nos Formations
           </h1>
           <p className="text-xl md:text-3xl drop-shadow-lg max-w-3xl mx-auto">
-            Découvrez notre catalogue complet de formations professionnelles adaptées à vos besoins en management, RH, finance et plus.
+            Découvrez notre catalogue complet de formations professionnelles
+            adaptées à vos besoins en management, RH, finance et plus.
           </p>
         </div>
       </section>
 
-      {/* NOUVEAU : Bouton Télécharger le catalogue – simple, classe, moderne */}
+      {/* Bouton Télécharger le catalogue */}
       <section className="py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <a
@@ -112,8 +122,8 @@ export default function FormationsPage() {
             download="catalogues-formations.pdf"
             className="inline-flex items-center gap-4 bg-yellow-500 text-blue-700 font-bold text-xl md:text-2xl px-10 py-6 rounded-2xl shadow-xl hover:bg-yellow-400 hover:shadow-2xl transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300"
           >
-            <Download className="w-8 h-8 md:w-10 md:h-10 " />
-            Télécharger git le catalogue des formations
+            <Download className="w-8 h-8 md:w-10 md:h-10" />
+            Télécharger le catalogue des formations
           </a>
           <p className="mt-4 text-gray-600 text-lg">
             (Janvier 2026 – Catalogue complet CACEG)
@@ -121,12 +131,15 @@ export default function FormationsPage() {
         </div>
       </section>
 
-      {/* Barre de recherche – inchangée */}
+      {/* Barre de recherche */}
       <section className="py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-3xl mx-auto">
             <div className="relative">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-900" size={24} />
+              <Search
+                className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-900"
+                size={24}
+              />
               <input
                 type="text"
                 placeholder="Rechercher une formation par titre ou description..."
@@ -139,31 +152,42 @@ export default function FormationsPage() {
         </div>
       </section>
 
-      {/* Liste des formations – inchangée */}
+      {/* Liste des formations */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           {filteredFormations.length === 0 ? (
             <p className="text-center text-2xl text-gray-600 py-20">
-              {searchQuery ? "Aucune formation ne correspond à votre recherche." : "Aucune formation disponible pour le moment."}
+              {searchQuery
+                ? "Aucune formation ne correspond à votre recherche."
+                : "Aucune formation disponible pour le moment."}
             </p>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
               {currentFormations.map((f) => (
-                <Link href={`/formations/${f.slug}`} key={f.id} className="block">
+                <Link
+                  href={`/formations/${f.slug}`}
+                  key={f.id}
+                  className="block"
+                >
                   <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-3 transition-all duration-300 overflow-hidden">
                     <div className="relative h-56">
-                      <Image 
-                        src={f.image || "/placeholder-formation.jpg"}  // ← Remplace placeholder par une image locale pour fixer l’erreur DNS
-                        alt={f.title} 
-                        fill 
-                        className="object-cover" 
+                      <Image
+                        src={f.image || "/placeholder-formation.jpg"}
+                        alt={f.title}
+                        fill
+                        className="object-cover"
                       />
-                    
                     </div>
                     <div className="p-8">
-                      <h3 className="text-xl font-bold text-blue-900 mb-3 line-clamp-2">{f.title}</h3>
-                      <p className="text-sm text-gray-600 mb-4">Par {f.instructor || "CACEG"}</p>
-                      <p className="text-gray-700 line-clamp-3 mb-6">{f.description}</p>
+                      <h3 className="text-xl font-bold text-blue-900 mb-3 line-clamp-2">
+                        {f.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Par {f.instructor || "CACEG"}
+                      </p>
+                      <p className="text-gray-700 line-clamp-3 mb-6">
+                        {f.description}
+                      </p>
                       <span className="text-blue-900 font-semibold hover:underline flex items-center gap-2">
                         En savoir plus <span className="text-yellow-500">→</span>
                       </span>
@@ -174,7 +198,7 @@ export default function FormationsPage() {
             </div>
           )}
 
-          {/* Pagination – inchangée */}
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="mt-16 flex items-center justify-center gap-4 flex-wrap">
               <button
@@ -191,8 +215,8 @@ export default function FormationsPage() {
                   onClick={() => setCurrentPage(i + 1)}
                   className={`px-6 py-4 rounded-lg font-bold transition ${
                     currentPage === i + 1
-                      ? 'bg-yellow-500 text-blue-900'
-                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                      ? "bg-yellow-500 text-blue-900"
+                      : "bg-gray-200 text-gray-800 hover:bg-gray-300"
                   }`}
                 >
                   {i + 1}
@@ -211,7 +235,7 @@ export default function FormationsPage() {
         </div>
       </section>
 
-      <Footer/>
+      <Footer />
     </main>
   );
 }
