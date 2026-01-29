@@ -19,13 +19,33 @@ export default function AdminLogin() {
     setError("");
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // Sign in with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
 
-      // 🔐 SAVE LOGIN TIME (1 hour session starts here)
-      localStorage.setItem("adminLoginTime", Date.now().toString());
+      // Get fresh ID token
+      const idToken = await userCredential.user.getIdToken();
 
+      // Call our API route to create secure session cookie
+      const response = await fetch("/api/set-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create session");
+      }
+
+      // Redirect to dashboard
       router.push("/admin/dashboard/acceuil");
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Login error:", err);
       setError("Email ou mot de passe incorrect");
     } finally {
       setLoading(false);

@@ -4,9 +4,10 @@ import {
   LayoutDashboard,
   BookOpen,
   Users,
-  Mail,
+  Briefcase,
+  Calendar,
   FileText,
-  HelpCircle,
+  Mail,
   LogOut,
 } from "lucide-react";
 
@@ -14,17 +15,18 @@ export default function Documentation() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-8 py-16">
-        {/* Titre principal */}
+
+        {/* Titre */}
         <div className="text-center mb-16">
           <h1 className="text-5xl md:text-6xl font-black text-blue-900 mb-6">
-            Documentation Admin CACEG
+            Documentation – Espace Administrateur
           </h1>
           <p className="text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
-            Bienvenue dans votre espace d'administration. Cette page vous guide à travers toutes les fonctionnalités du back office pour gérer votre centre de formation efficacement.
+            Cette page explique simplement chaque partie du back office.
+            Elle vous aide à utiliser le site pas à pas.
           </p>
         </div>
 
-        {/* Sections */}
         <div className="space-y-16">
 
           {/* Dashboard */}
@@ -36,7 +38,9 @@ export default function Documentation() {
               <h2 className="text-3xl font-bold text-blue-900">Dashboard</h2>
             </div>
             <p className="text-lg text-gray-700 leading-relaxed">
-              Vue d'ensemble de votre activité : nombre d'étudiants inscrits, demandes en attente, messages non lus, et statistiques rapides. C'est votre tableau de bord principal pour suivre l'état du centre au quotidien.
+              Cette page est la première que vous voyez après la connexion.
+              Elle vous montre l’état général de votre centre : inscriptions,
+              messages reçus et demandes en attente.
             </p>
           </section>
 
@@ -48,27 +52,11 @@ export default function Documentation() {
               </div>
               <h2 className="text-3xl font-bold text-blue-900">Gestion des Formations</h2>
             </div>
-            <p className="text-lg text-gray-700 leading-relaxed mb-6">
-              Ici, vous pouvez :
+            <p className="text-lg text-gray-700 leading-relaxed">
+              Ici, vous gérez toutes les formations proposées par votre centre.
+              Vous pouvez en ajouter de nouvelles, modifier les informations
+              (titre, prix, durée, description) ou supprimer une formation.
             </p>
-            <ul className="space-y-3 text-gray-700 text-lg">
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Ajouter, modifier ou supprimer une formation
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Mettre à jour titre, description, prix, image, durée, etc.
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Exporter la liste en CSV
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Rechercher et filtrer par prix
-              </li>
-            </ul>
           </section>
 
           {/* Gestion Étudiants */}
@@ -79,58 +67,56 @@ export default function Documentation() {
               </div>
               <h2 className="text-3xl font-bold text-blue-900">Gestion des Étudiants</h2>
             </div>
-            <p className="text-lg text-gray-700 leading-relaxed mb-6">
-              Gérez tous les étudiants inscrits :
+            <p className="text-lg text-gray-700 leading-relaxed">
+              Cette section contient la liste de tous les étudiants inscrits.
+              Vous pouvez voir leurs informations, rechercher un étudiant
+              et exporter la liste si nécessaire.
             </p>
-            <ul className="space-y-3 text-gray-700 text-lg">
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Voir nom, email, téléphone, wilaya, formation, date de naissance
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Ajouter ou modifier un étudiant manuellement
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Rechercher par nom/prénom
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Filtrer par formation ou wilaya
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Exporter en CSV
-              </li>
-            </ul>
           </section>
 
-          {/* Demandes Formulaires */}
+          {/* Gestion Domaines */}
+          <section className="bg-white rounded-3xl shadow-xl p-10">
+            <div className="flex items-center gap-6 mb-8">
+              <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center">
+                <Briefcase size={32} className="text-indigo-700" />
+              </div>
+              <h2 className="text-3xl font-bold text-blue-900">Gestion des Domaines</h2>
+            </div>
+            <p className="text-lg text-gray-700 leading-relaxed">
+              Les domaines servent à classer les formations
+              (exemple : informatique, langues, management).
+              Vous pouvez ajouter ou modifier un domaine.
+              Ils s’affichent automatiquement sur le site.
+            </p>
+          </section>
+
+          {/* Gestion Événements */}
+          <section className="bg-white rounded-3xl shadow-xl p-10">
+            <div className="flex items-center gap-6 mb-8">
+              <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center">
+                <Calendar size={32} className="text-indigo-700" />
+              </div>
+              <h2 className="text-3xl font-bold text-blue-900">Gestion des Événements</h2>
+            </div>
+            <p className="text-lg text-gray-700 leading-relaxed">
+              Cette partie permet d’ajouter des événements et des actualités.
+              Vous choisissez le titre, la date, le lieu, le texte et les images.
+              Une fois publié, l’événement apparaît sur le site public.
+            </p>
+          </section>
+
+          {/* Gestion Formulaires */}
           <section className="bg-white rounded-3xl shadow-xl p-10">
             <div className="flex items-center gap-6 mb-8">
               <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center">
                 <FileText size={32} className="text-green-700" />
               </div>
-              <h2 className="text-3xl font-bold text-blue-900">Demandes Formulaires</h2>
+              <h2 className="text-3xl font-bold text-blue-900">Gestion des Formulaires</h2>
             </div>
-            <p className="text-lg text-gray-700 leading-relaxed mb-6">
-              Toutes les demandes d'inscription reçues via le site internet apparaissent ici.
+            <p className="text-lg text-gray-700 leading-relaxed">
+              Toutes les demandes envoyées depuis le site arrivent ici.
+              Vous pouvez lire chaque demande et décider de l’accepter ou non.
             </p>
-            <ul className="space-y-3 text-gray-700 text-lg">
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Voir les demandes en attente
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Accepter ou refuser chaque demande
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Badge rouge dans le menu quand il y a des nouvelles demandes
-              </li>
-            </ul>
           </section>
 
           {/* Gestion Messages */}
@@ -141,34 +127,13 @@ export default function Documentation() {
               </div>
               <h2 className="text-3xl font-bold text-blue-900">Gestion des Messages</h2>
             </div>
-            <p className="text-lg text-gray-700 leading-relaxed mb-6">
-              Tous les messages envoyés via le formulaire "Contactez-nous" du site.
+            <p className="text-lg text-gray-700 leading-relaxed">
+              Cette page affiche les messages envoyés via le formulaire de contact.
+              Vous pouvez lire les messages et répondre par email ou par téléphone.
             </p>
-            <ul className="space-y-3 text-gray-700 text-lg">
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Voir expéditeur, sujet, message, date
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Cliquez sur un message pour voir les détails
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Répondre directement par Gmail ou appeler (si numéro fourni)
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Marqué comme lu automatiquement à l'ouverture
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-yellow-500 mt-1">•</span>
-                Badge rouge dans le menu pour les non lus
-              </li>
-            </ul>
           </section>
 
-          {/* Sécurité & Déconnexion */}
+          {/* Sécurité */}
           <section className="bg-white rounded-3xl shadow-xl p-10">
             <div className="flex items-center gap-6 mb-8">
               <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center">
@@ -177,22 +142,24 @@ export default function Documentation() {
               <h2 className="text-3xl font-bold text-blue-900">Sécurité & Déconnexion</h2>
             </div>
             <p className="text-lg text-gray-700 leading-relaxed">
-              Votre session expire automatiquement après <strong>1 heure</strong> d'inactivité pour des raisons de sécurité.<br />
-              Cliquez sur le bouton jaune "Déconnexion" en bas du menu pour vous déconnecter manuellement.
+              Pour votre sécurité, la connexion se ferme automatiquement
+              après une période sans activité.
+              Vous pouvez aussi vous déconnecter manuellement à tout moment.
             </p>
           </section>
 
         </div>
 
-        {/* Message final */}
+        {/* Fin */}
         <div className="text-center mt-20">
           <p className="text-2xl font-bold text-blue-900">
-            Besoin d’aide ? Contactez le développeur à tout moment.
+            Besoin d’aide ? N’hésitez pas à demander.
           </p>
           <p className="text-xl text-gray-600 mt-4">
-            Le back office est conçu pour être simple, rapide et puissant. Vous avez tout sous contrôle !
+            Ce système a été conçu pour être simple et facile à utiliser.
           </p>
         </div>
+
       </div>
     </div>
   );

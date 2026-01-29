@@ -49,6 +49,7 @@ export default function FormationDetail() {
     telephone: '',
     wilaya: '',
     dateNaissance: '',
+    niveauEtude: '', // ✅ AJOUT
   });
 
   const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({
@@ -92,13 +93,26 @@ export default function FormationDetail() {
         telephone: formData.telephone.trim(),
         wilaya: formData.wilaya,
         dateNaissance: formData.dateNaissance,
+        niveauEtude: formData.niveauEtude, // ✅ AJOUT
         date: new Date().toISOString(),
       });
 
-      setToast({ show: true, message: "Votre candidature a bien été envoyée ! Nous vous contacterons très bientôt.", type: "success" });
+      setToast({
+        show: true,
+        message: "Votre candidature a bien été envoyée ! Nous vous contacterons très bientôt.",
+        type: "success",
+      });
 
       setShowInscription(false);
-      setFormData({ nom: '', prenom: '', email: '', telephone: '', wilaya: '', dateNaissance: '' });
+      setFormData({
+        nom: '',
+        prenom: '',
+        email: '',
+        telephone: '',
+        wilaya: '',
+        dateNaissance: '',
+        niveauEtude: '', // ✅ AJOUT
+      });
     } catch (error) {
       console.error("Erreur envoi inscription:", error);
       setToast({ show: true, message: "Erreur lors de l'envoi. Veuillez réessayer.", type: "error" });
@@ -134,10 +148,10 @@ export default function FormationDetail() {
     <>
       <Navbar />
 
-      {/* Hero avec image locale fallback */}
+      {/* Hero */}
       <section className="relative h-96 md:h-[500px] overflow-hidden">
         <Image
-          src={formation.image || "/images/placeholder-formation.jpg"}  // ← IMAGE LOCALE DANS public/images/
+          src={formation.image || "/images/placeholder-formation.jpg"}
           alt={formation.title}
           fill
           className="object-cover"
@@ -148,14 +162,21 @@ export default function FormationDetail() {
           <h1 className="text-4xl md:text-6xl font-bold mb-4">{formation.title}</h1>
           <p className="text-xl md:text-2xl mb-6">Par {formation.instructor || "Expert CACEG"}</p>
           <div className="flex flex-wrap gap-6 items-center">
-            {formation.duration && <span className="bg-white/20 backdrop-blur px-6 py-3 rounded-full text-lg">Durée : {formation.duration}</span>}
-            {formation.coursesCount && <span className="bg-white/20 backdrop-blur px-6 py-3 rounded-full text-lg">{formation.coursesCount} modules</span>}
-           
+            {formation.duration && (
+              <span className="bg-white/20 backdrop-blur px-6 py-3 rounded-full text-lg">
+                Durée : {formation.duration}
+              </span>
+            )}
+            {formation.coursesCount && (
+              <span className="bg-white/20 backdrop-blur px-6 py-3 rounded-full text-lg">
+                {formation.coursesCount} modules
+              </span>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Bouton Retour */}
+      {/* Retour */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <button
           onClick={() => router.back()}
@@ -166,11 +187,10 @@ export default function FormationDetail() {
         </button>
       </div>
 
-      {/* Contenu principal */}
+      {/* Contenu */}
       <section className="py-8 bg-gray-50 pb-20">
         <div className="max-w-4xl mx-auto px-6">
           <div className="bg-white rounded-3xl shadow-xl p-10 md:p-16 space-y-16">
-            {/* Description */}
             <div>
               <h2 className="text-3xl font-bold text-blue-900 mb-6">Description</h2>
               <p className="text-lg text-gray-700 leading-relaxed whitespace-pre-line">
@@ -178,7 +198,6 @@ export default function FormationDetail() {
               </p>
             </div>
 
-            {/* Objectifs */}
             {formation.objectives && (
               <div>
                 <h2 className="text-3xl font-bold text-blue-900 mb-8">Objectifs de la formation</h2>
@@ -198,7 +217,6 @@ export default function FormationDetail() {
               </div>
             )}
 
-            {/* Prérequis */}
             {formation.prerequisites && (
               <div>
                 <h2 className="text-3xl font-bold text-blue-900 mb-6">Prérequis</h2>
@@ -208,7 +226,6 @@ export default function FormationDetail() {
               </div>
             )}
 
-            {/* Public cible */}
             {formation.targetAudience && (
               <div>
                 <h2 className="text-3xl font-bold text-blue-900 mb-6">Public cible</h2>
@@ -218,13 +235,12 @@ export default function FormationDetail() {
               </div>
             )}
 
-            {/* Bouton inscription */}
             <div className="text-center pt-8">
               <button
                 onClick={() => setShowInscription(true)}
                 className="bg-yellow-500 text-blue-900 font-bold text-2xl px-12 py-6 rounded-2xl hover:bg-yellow-400 transition shadow-2xl"
               >
-                M'inscrire à cette formation
+                {"M'inscrire à cette formation"}
               </button>
             </div>
           </div>
@@ -235,23 +251,58 @@ export default function FormationDetail() {
 
       {/* Modal Inscription */}
       {showInscription && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowInscription(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-2xl w-full mx-6 overflow-y-auto max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowInscription(false)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl p-10 max-w-2xl w-full mx-6 overflow-y-auto max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-3xl font-bold text-blue-900 mb-6 text-center">
               Demande d'inscription
             </h2>
             <p className="text-center text-lg text-gray-700 mb-8">
               Formation : <strong>{formation.title}</strong>
             </p>
+
             <form onSubmit={handleInscription} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
-                <input type="text" placeholder="Nom *" required value={formData.nom} onChange={(e) => setFormData({...formData, nom: e.target.value})} className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
-                <input type="text" placeholder="Prénom *" required value={formData.prenom} onChange={(e) => setFormData({...formData, prenom: e.target.value})} className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
+                <input
+                  type="text"
+                  placeholder="Nom *"
+                  required
+                  value={formData.nom}
+                  onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                  className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+                />
+                <input
+                  type="text"
+                  placeholder="Prénom *"
+                  required
+                  value={formData.prenom}
+                  onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
+                  className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+                />
               </div>
 
-              <input type="email" placeholder="Email *" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
+              <input
+                type="email"
+                placeholder="Email *"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+              />
 
-              <input type="tel" placeholder="Téléphone *" required value={formData.telephone} onChange={(e) => setFormData({...formData, telephone: e.target.value})} className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition" />
+              <input
+                type="tel"
+                placeholder="Téléphone *"
+                required
+                value={formData.telephone}
+                onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
+              />
 
               <input
                 type="date"
@@ -260,6 +311,19 @@ export default function FormationDetail() {
                 onChange={(e) => setFormData({ ...formData, dateNaissance: e.target.value })}
                 className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition"
               />
+
+              {/* ✅ Niveau d'étude AJOUTÉ */}
+              <select
+                required
+                value={formData.niveauEtude}
+                onChange={(e) => setFormData({ ...formData, niveauEtude: e.target.value })}
+                className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 transition bg-white"
+              >
+                <option value="">Niveau d’étude *</option>
+                <option value="Secondaire">Secondaire</option>
+                <option value="Universitaire">Universitaire</option>
+                <option value="Formation professionnelle">Formation professionnelle</option>
+              </select>
 
               <select
                 required
@@ -276,10 +340,17 @@ export default function FormationDetail() {
               </select>
 
               <div className="flex gap-6 pt-8">
-                <button type="submit" className="flex-1 bg-yellow-500 text-blue-900 font-bold py-5 rounded-xl hover:bg-yellow-400 transition text-xl">
+                <button
+                  type="submit"
+                  className="flex-1 bg-yellow-500 text-blue-900 font-bold py-5 rounded-xl hover:bg-yellow-400 transition text-xl"
+                >
                   Envoyer ma demande
                 </button>
-                <button type="button" onClick={() => setShowInscription(false)} className="flex-1 bg-gray-300 text-gray-800 font-bold py-5 rounded-xl hover:bg-gray-400 transition text-xl">
+                <button
+                  type="button"
+                  onClick={() => setShowInscription(false)}
+                  className="flex-1 bg-gray-300 text-gray-800 font-bold py-5 rounded-xl hover:bg-gray-400 transition text-xl"
+                >
                   Annuler
                 </button>
               </div>
@@ -288,11 +359,13 @@ export default function FormationDetail() {
         </div>
       )}
 
-      {/* Toast avec fade-in/out + icône ✓ */}
+      {/* Toast */}
       <div className="fixed inset-x-0 bottom-8 z-50 flex justify-center pointer-events-none">
-        <div className={`transition-all duration-500 ease-in-out ${
-          toast.show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-        }`}>
+        <div
+          className={`transition-all duration-500 ease-in-out ${
+            toast.show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          }`}
+        >
           <div className="flex items-center gap-4 px-8 py-5 rounded-2xl shadow-2xl bg-green-600 text-white font-medium text-lg">
             <span className="text-3xl">✓</span>
             <span>{toast.message}</span>

@@ -15,6 +15,7 @@ interface Inscription {
   telephone: string;
   wilaya: string;
   dateNaissance?: string;
+  niveauEtude?: string; // ✅ AJOUT
   date: string;
 }
 
@@ -27,7 +28,6 @@ export default function DemandesFormulaires() {
     action: "accept",
   });
 
-  // Toast state
   const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({
     show: false,
     message: "",
@@ -36,10 +36,13 @@ export default function DemandesFormulaires() {
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "inscriptions"), (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      } as Inscription)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const data = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        } as Inscription))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
       setInscriptions(data);
       setLoading(false);
     });
@@ -79,6 +82,7 @@ export default function DemandesFormulaires() {
           telephone: ins.telephone,
           wilaya: ins.wilaya,
           dateNaissance: ins.dateNaissance || null,
+          niveauEtude: ins.niveauEtude || null, // ✅ AJOUT
           dateInscription: new Date().toISOString(),
           status: "inscrit",
         });
@@ -119,7 +123,7 @@ export default function DemandesFormulaires() {
 
         {inscriptions.length === 0 ? (
           <div className="bg-white rounded-3xl shadow-xl p-16 text-center">
-            <p className="text-2xl text-gray-500">Aucune demande pour l'instant</p>
+            <p className="text-2xl text-gray-500">{"Aucune demande pour l'instant"}</p>
           </div>
         ) : (
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
@@ -132,6 +136,7 @@ export default function DemandesFormulaires() {
                   <th className="px-6 py-4 text-left">Contact</th>
                   <th className="px-6 py-4 text-left">Wilaya</th>
                   <th className="px-6 py-4 text-left">Date naissance</th>
+                  <th className="px-6 py-4 text-left">Niveau d’étude</th> {/* ✅ AJOUT */}
                 </tr>
               </thead>
               <tbody>
@@ -158,6 +163,9 @@ export default function DemandesFormulaires() {
                     <td className="px-6 py-4 text-sm">
                       {ins.dateNaissance ? new Date(ins.dateNaissance).toLocaleDateString('fr-DZ') : "-"}
                     </td>
+                    <td className="px-6 py-4 text-sm">
+                      {ins.niveauEtude || "-"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -168,8 +176,14 @@ export default function DemandesFormulaires() {
 
       {/* Modal Détails */}
       {selectedInscription && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedInscription(null)}>
-          <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedInscription(null)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl p-10 max-w-2xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-start mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-blue-900 mb-4">
@@ -205,6 +219,13 @@ export default function DemandesFormulaires() {
                 <span className="font-medium text-gray-600">Date de naissance :</span>
                 <p>{selectedInscription.dateNaissance ? new Date(selectedInscription.dateNaissance).toLocaleDateString('fr-DZ') : "Non renseignée"}</p>
               </div>
+
+              {/* ✅ AJOUT : Niveau d'étude */}
+              <div>
+                <span className="font-medium text-gray-600">Niveau d’étude :</span>
+                <p>{selectedInscription.niveauEtude || "Non renseigné"}</p>
+              </div>
+
               <div>
                 <span className="font-medium text-gray-600">Date de la demande :</span>
                 <p>{new Date(selectedInscription.date).toLocaleString('fr-DZ')}</p>
@@ -229,7 +250,7 @@ export default function DemandesFormulaires() {
         </div>
       )}
 
-      {/* Modal de confirmation personnalisé */}
+      {/* Modal confirmation */}
       {confirmModal.show && confirmModal.inscription && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-lg w-full text-center">
@@ -262,7 +283,7 @@ export default function DemandesFormulaires() {
         </div>
       )}
 
-      {/* Toast final */}
+      {/* Toast */}
       <div className="fixed inset-x-0 bottom-8 z-50 flex justify-center pointer-events-none">
         <div className={`transition-all duration-500 ease-in-out ${
           toast.show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"

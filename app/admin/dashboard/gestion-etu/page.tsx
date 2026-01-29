@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import {
   collection,
   onSnapshot,
@@ -20,18 +20,68 @@ import {
   Search,
   Filter,
   X,
-  Check,
   ArrowUpDown,
 } from "lucide-react";
 
 const wilayas = [
-  "Adrar", "Chlef", "Laghouat", "Oum El Bouaghi", "Batna", "Béjaïa", "Biskra", "Béchar", "Blida", "Bouira",
-  "Tamanrasset", "Tébessa", "Tlemcen", "Tiaret", "Tizi Ouzou", "Alger", "Djelfa", "Jijel", "Sétif", "Saïda",
-  "Skikda", "Sidi Bel Abbès", "Annaba", "Guelma", "Constantine", "Médéa", "Mostaganem", "M'Sila", "Mascara",
-  "Ouargla", "Oran", "El Bayadh", "Illizi", "Bordj Bou Arreridj", "Boumerdès", "El Tarf", "Tindouf", "Tissemsilt",
-  "El Oued", "Khenchela", "Souk Ahras", "Tipaza", "Mila", "Aïn Defla", "Naâma", "Aïn Témouchent", "Ghardaïa",
-  "Relizane", "Timimoun", "Bordj Badji Mokhtar", "Ouled Djellal", "Béni Abbès", "In Salah", "In Guezzam",
-  "Touggourt", "Djanet", "El M'Ghair", "El Meniaa",
+  "Adrar",
+  "Chlef",
+  "Laghouat",
+  "Oum El Bouaghi",
+  "Batna",
+  "Béjaïa",
+  "Biskra",
+  "Béchar",
+  "Blida",
+  "Bouira",
+  "Tamanrasset",
+  "Tébessa",
+  "Tlemcen",
+  "Tiaret",
+  "Tizi Ouzou",
+  "Alger",
+  "Djelfa",
+  "Jijel",
+  "Sétif",
+  "Saïda",
+  "Skikda",
+  "Sidi Bel Abbès",
+  "Annaba",
+  "Guelma",
+  "Constantine",
+  "Médéa",
+  "Mostaganem",
+  "M'Sila",
+  "Mascara",
+  "Ouargla",
+  "Oran",
+  "El Bayadh",
+  "Illizi",
+  "Bordj Bou Arreridj",
+  "Boumerdès",
+  "El Tarf",
+  "Tindouf",
+  "Tissemsilt",
+  "El Oued",
+  "Khenchela",
+  "Souk Ahras",
+  "Tipaza",
+  "Mila",
+  "Aïn Defla",
+  "Naâma",
+  "Aïn Témouchent",
+  "Ghardaïa",
+  "Relizane",
+  "Timimoun",
+  "Bordj Badji Mokhtar",
+  "Ouled Djellal",
+  "Béni Abbès",
+  "In Salah",
+  "In Guezzam",
+  "Touggourt",
+  "Djanet",
+  "El M'Ghair",
+  "El Meniaa",
 ];
 
 interface Formation {
@@ -49,7 +99,7 @@ interface Etudiant {
   wilaya: string;
   commune: string;
   dateNaissance: string;
-  dateInscription: any;
+  dateInscription: unknown; // ✅ plus de any
 }
 
 const allColumns = [
@@ -61,78 +111,24 @@ const allColumns = [
   { key: "formation", label: "Formation" },
 ];
 
-function CustomSelect({
-  options,
-  value,
-  onChange,
-  placeholder,
-}: {
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+const getTime = (v: unknown): number => {
+  if (!v) return 0;
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // Firestore Timestamp-like { toDate() }
+  if (typeof v === "object" && v !== null && "toDate" in v) {
+    const maybe = v as { toDate?: () => Date };
+    const d = maybe.toDate?.();
+    return d ? d.getTime() : 0;
+  }
 
-  const selectedLabel =
-    options.find((o) => o.value === value)?.label || placeholder;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full px-6 py-4 pr-12 text-left border-2 border-gray-200 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
-      >
-        <span className={value ? "text-gray-900" : "text-gray-500"}>
-          {selectedLabel}
-        </span>
-        <ChevronDown
-          className={`text-gray-500 transition ${open ? "rotate-180" : ""}`}
-          size={20}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 overflow-hidden">
-          <div className="max-h-64 overflow-y-auto">
-            {options.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                className="w-full px-6 py-3 text-left hover:bg-gray-50 transition flex items-center justify-between"
-              >
-                <span className="text-gray-800">{option.label}</span>
-                {value === option.value && (
-                  <Check size={18} className="text-blue-900" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+  // string/date/number
+  const d = new Date(v as any);
+  const t = d.getTime();
+  return Number.isNaN(t) ? 0 : t;
+};
 
 export default function GestionEtudiants() {
   const [allEtudiants, setAllEtudiants] = useState<Etudiant[]>([]);
-  const [etudiants, setEtudiants] = useState<Etudiant[]>([]);
   const [formations, setFormations] = useState<Formation[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -142,16 +138,31 @@ export default function GestionEtudiants() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterFormation, setFilterFormation] = useState("");
-  const [filterWilaya, setFilterWilaya] = useState("");
+  const [filterFormations, setFilterFormations] = useState<string[]>([]);
+  const [filterWilayas, setFilterWilayas] = useState<string[]>([]);
 
-  const [sortBy, setSortBy] = useState<"dateDesc" | "dateAsc" | "nameAsc" | "nameDesc">("dateDesc");
+  const [sortBy, setSortBy] = useState<
+    "dateDesc" | "dateAsc" | "nameAsc" | "nameDesc"
+  >("dateDesc");
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(
     allColumns.map((c) => c.key)
   );
 
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+  const [showFormationDropdown, setShowFormationDropdown] = useState(false);
+  const [showWilayaDropdown, setShowWilayaDropdown] = useState(false);
+
+  // Modal dropdown controls
+  const [showModalWilayaDropdown, setShowModalWilayaDropdown] = useState(false);
+  const [showModalFormationDropdown, setShowModalFormationDropdown] =
+    useState(false);
+
+  // Only Formation will flip upward if needed
+  const [formationDropUp, setFormationDropUp] = useState(false);
+
+  // ✅ On garde la ref sur le CONTENEUR du bouton formation
+  const formationDropdownRef = useRef<HTMLDivElement>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -167,24 +178,17 @@ export default function GestionEtudiants() {
     dateNaissance: "",
   });
 
-  const getInscriptionDate = (dateInscription: any): Date => {
-    if (!dateInscription) return new Date(0);
-    if (typeof dateInscription === "string") return new Date(dateInscription);
-    if (dateInscription.toDate) return dateInscription.toDate();
-    return new Date(0);
-  };
-
   useEffect(() => {
     const unsubEtudiants = onSnapshot(collection(db, "etudiants"), (snap) => {
       const data = snap.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Etudiant)
+        (d) => ({ id: d.id, ...d.data() } as Etudiant)
       );
       setAllEtudiants(data);
     });
 
     const unsubFormations = onSnapshot(collection(db, "formations"), (snap) => {
       const data = snap.docs.map(
-        (doc) => ({ id: doc.id, title: doc.data().title } as Formation)
+        (d) => ({ id: d.id, title: (d.data() as any).title } as Formation)
       );
       setFormations(data);
     });
@@ -195,7 +199,8 @@ export default function GestionEtudiants() {
     };
   }, []);
 
-  useEffect(() => {
+  // ✅ etudiants = dérivé (useMemo) → plus de setEtudiants dans useEffect
+  const etudiants = useMemo(() => {
     let filtered = allEtudiants;
 
     if (searchQuery.trim()) {
@@ -206,25 +211,29 @@ export default function GestionEtudiants() {
       });
     }
 
-    if (filterFormation) filtered = filtered.filter((e) => e.formationId === filterFormation);
-    if (filterWilaya) filtered = filtered.filter((e) => e.wilaya === filterWilaya);
+    if (filterFormations.length > 0) {
+      filtered = filtered.filter((e) => filterFormations.includes(e.formationId));
+    }
 
-    // TRI corrigé : appliqué sur toutes les données filtrées AVANT pagination
-    filtered = [...filtered].sort((a, b) => {
-      if (sortBy === "dateDesc")
-        return getInscriptionDate(b.dateInscription).getTime() - getInscriptionDate(a.dateInscription).getTime();
-      if (sortBy === "dateAsc")
-        return getInscriptionDate(a.dateInscription).getTime() - getInscriptionDate(b.dateInscription).getTime();
+    if (filterWilayas.length > 0) {
+      filtered = filtered.filter((e) => filterWilayas.includes(e.wilaya));
+    }
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "dateDesc") return getTime(b.dateInscription) - getTime(a.dateInscription);
+      if (sortBy === "dateAsc") return getTime(a.dateInscription) - getTime(b.dateInscription);
       if (sortBy === "nameAsc")
         return `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`);
       if (sortBy === "nameDesc")
         return `${b.prenom} ${b.nom}`.localeCompare(`${a.prenom} ${a.nom}`);
       return 0;
     });
+  }, [allEtudiants, searchQuery, filterFormations, filterWilayas, sortBy]);
 
-    setEtudiants(filtered);
-    setCurrentPage(1); // Reset page à chaque changement
-  }, [searchQuery, filterFormation, filterWilaya, sortBy, allEtudiants]);
+  // ✅ Reset page quand filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterFormations, filterWilayas, sortBy]);
 
   const totalPages = Math.ceil(etudiants.length / itemsPerPage);
   const paginatedEtudiants = etudiants.slice(
@@ -234,13 +243,17 @@ export default function GestionEtudiants() {
 
   const getPageNumbers = () => {
     if (totalPages <= 1) return [];
-    const pages = [];
+    const pages: Array<number | "..."> = [];
     if (totalPages <= 7) {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
       pages.push(1, 2);
       if (currentPage > 4) pages.push("...");
-      for (let i = Math.max(3, currentPage - 1); i <= Math.min(totalPages - 2, currentPage + 1); i++) {
+      for (
+        let i = Math.max(3, currentPage - 1);
+        i <= Math.min(totalPages - 2, currentPage + 1);
+        i++
+      ) {
         pages.push(i);
       }
       if (currentPage < totalPages - 3) pages.push("...");
@@ -253,17 +266,23 @@ export default function GestionEtudiants() {
     setVisibleColumns((prev) => {
       const isCurrentlyVisible = prev.includes(key);
       const visibleCount = prev.length;
+      if (isCurrentlyVisible && visibleCount === 1) return prev;
 
-      if (isCurrentlyVisible && visibleCount === 1) {
-        return prev;
-      }
-
-      if (isCurrentlyVisible) {
-        return prev.filter((k) => k !== key);
-      } else {
-        return [...prev, key];
-      }
+      if (isCurrentlyVisible) return prev.filter((k) => k !== key);
+      return [...prev, key];
     });
+  };
+
+  const toggleFormation = (id: string) => {
+    setFilterFormations((prev) =>
+      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
+    );
+  };
+
+  const toggleWilaya = (wilaya: string) => {
+    setFilterWilayas((prev) =>
+      prev.includes(wilaya) ? prev.filter((w) => w !== wilaya) : [...prev, wilaya]
+    );
   };
 
   const handleNameSort = () => {
@@ -339,6 +358,7 @@ export default function GestionEtudiants() {
       setEditMode(false);
       setShowConfirmDelete(false);
     } catch (error) {
+      console.error(error); // ✅ plus de warning unused
       alert("Erreur lors de la suppression");
       setShowConfirmDelete(false);
     }
@@ -349,10 +369,12 @@ export default function GestionEtudiants() {
   };
 
   const toggleSelect = (id: string) => {
-    const newSet = new Set(selectedIds);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
-    setSelectedIds(newSet);
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
   };
 
   const toggleSelectAll = () => {
@@ -379,10 +401,13 @@ export default function GestionEtudiants() {
       commune: "",
       dateNaissance: "",
     });
+    setShowModalWilayaDropdown(false);
+    setShowModalFormationDropdown(false);
+    setFormationDropUp(false);
   };
 
   const getFormationTitle = (formationId: string) => {
-    const f = formations.find((f) => f.id === formationId);
+    const f = formations.find((ff) => ff.id === formationId);
     return f ? f.title : "Aucune formation";
   };
 
@@ -404,9 +429,7 @@ export default function GestionEtudiants() {
       getFormationTitle(e.formationId),
     ]);
 
-    const csvContent = [headers, ...rows]
-      .map((row) => row.join(","))
-      .join("\n");
+    const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
     const blob = new Blob([`\uFEFF${csvContent}`], {
       type: "text/csv;charset=utf-8;",
     });
@@ -419,31 +442,28 @@ export default function GestionEtudiants() {
 
   const resetAllFilters = () => {
     setSearchQuery("");
-    setFilterFormation("");
-    setFilterWilaya("");
+    setFilterFormations([]);
+    setFilterWilayas([]);
     setSortBy("dateDesc");
   };
 
-  const formationFilterOptions = [
-    { value: "", label: "Toutes les formations" },
-    ...formations.map((f) => ({ value: f.id, label: f.title })),
-  ];
-
-  const wilayaFilterOptions = [
-    { value: "", label: "Toutes les wilayas" },
-    ...wilayas.map((w) => ({ value: w, label: w })),
-  ];
-
-  const modalWilayaOptions = wilayas.map((w) => ({ value: w, label: w }));
-  const modalFormationOptions = formations.map((f) => ({
-    value: f.id,
-    label: f.title,
-  }));
+  // ✅ plus de setFormationDropUp dans useEffect → calcul au moment de l'ouverture
+  const toggleModalFormationDropdown = () => {
+    if (!showModalFormationDropdown) {
+      const rect = formationDropdownRef.current?.getBoundingClientRect();
+      const bottom = rect?.bottom ?? 0;
+      const spaceBelow = window.innerHeight - bottom;
+      setFormationDropUp(spaceBelow < 280);
+      setShowModalFormationDropdown(true);
+      return;
+    }
+    setShowModalFormationDropdown(false);
+    setFormationDropUp(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-8 py-10">
-        {/* Header */}
         <div className="flex justify-between items-center mb-10">
           <h1 className="text-4xl font-bold text-blue-900">
             Gestion des Étudiants
@@ -487,14 +507,10 @@ export default function GestionEtudiants() {
           </div>
         </div>
 
-        {/* Main Filters */}
         <div className="bg-white rounded-2xl shadow-md p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="relative">
-              <Search
-                className="absolute left-4 top-4 text-gray-400"
-                size={20}
-              />
+              <Search className="absolute left-4 top-4 text-gray-400" size={20} />
               <input
                 type="text"
                 placeholder="Rechercher par nom ou prénom..."
@@ -504,19 +520,121 @@ export default function GestionEtudiants() {
               />
             </div>
 
-            <CustomSelect
-              options={formationFilterOptions}
-              value={filterFormation}
-              onChange={setFilterFormation}
-              placeholder="Toutes les formations"
-            />
+            <div className="relative inline-block text-left">
+              <button
+                type="button"
+                onClick={() => setShowFormationDropdown(!showFormationDropdown)}
+                className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition whitespace-nowrap min-w-[220px] w-full justify-between"
+              >
+                <span className="truncate">
+                  {filterFormations.length === 0
+                    ? "Toutes les formations"
+                    : `${filterFormations.length} formations`}
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`text-gray-500 transition-transform ${
+                    showFormationDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
-            <CustomSelect
-              options={wilayaFilterOptions}
-              value={filterWilaya}
-              onChange={setFilterWilaya}
-              placeholder="Toutes les wilayas"
-            />
+              {showFormationDropdown && (
+                <div className="absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30">
+                  <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                    {formations.map((f) => (
+                      <label
+                        key={f.id}
+                        className="flex items-center px-5 py-3.5 hover:bg-blue-50/50 cursor-pointer transition-colors select-none group"
+                      >
+                        <div className="relative flex h-5 w-5 items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={filterFormations.includes(f.id)}
+                            onChange={() => toggleFormation(f.id)}
+                            className="peer h-5 w-5 appearance-none rounded-md border-2 border-gray-300 bg-white checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors group-hover:border-blue-400"
+                          />
+                          <svg
+                            className="pointer-events-none absolute h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth="3"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-gray-700 font-medium group-hover:text-blue-700 transition-colors">
+                          {f.title}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="relative inline-block text-left">
+              <button
+                type="button"
+                onClick={() => setShowWilayaDropdown(!showWilayaDropdown)}
+                className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition whitespace-nowrap min-w-[220px] w-full justify-between"
+              >
+                <span className="truncate">
+                  {filterWilayas.length === 0
+                    ? "Toutes les wilayas"
+                    : `${filterWilayas.length} wilayas`}
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`text-gray-500 transition-transform ${
+                    showWilayaDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {showWilayaDropdown && (
+                <div className="absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30">
+                  <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                    {wilayas.map((w) => (
+                      <label
+                        key={w}
+                        className="flex items-center px-5 py-3.5 hover:bg-blue-50/50 cursor-pointer transition-colors select-none group"
+                      >
+                        <div className="relative flex h-5 w-5 items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={filterWilayas.includes(w)}
+                            onChange={() => toggleWilaya(w)}
+                            className="peer h-5 w-5 appearance-none rounded-md border-2 border-gray-300 bg-white checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors group-hover:border-blue-400"
+                          />
+                          <svg
+                            className="pointer-events-none absolute h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth="3"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-gray-700 font-medium group-hover:text-blue-700 transition-colors">
+                          {w}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <button
               onClick={resetAllFilters}
@@ -528,48 +646,59 @@ export default function GestionEtudiants() {
           </div>
         </div>
 
-        {/* Table Card */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="flex justify-between items-center p-6 border-b border-gray-100">
             <div className="flex items-center gap-6">
               <span className="text-gray-600 font-medium">
                 Étudiants Summary ({etudiants.length})
               </span>
-              <div className="relative z-50">
+
+              <div className="relative inline-block text-left">
                 <button
+                  type="button"
                   onClick={() => setShowColumnDropdown(!showColumnDropdown)}
-                  className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition whitespace-nowrap"
+                  className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition whitespace-nowrap min-w-[220px]"
                 >
                   <Filter size={18} />
                   Afficher les colonnes
                   <ChevronDown
                     size={18}
-                    className={`transition ${
+                    className={`text-gray-500 transition-transform ${
                       showColumnDropdown ? "rotate-180" : ""
                     }`}
                   />
                 </button>
 
                 {showColumnDropdown && (
-                  <div className="absolute left-0 top-full mt-3 min-w-full bg-white rounded-2xl shadow-2xl border border-gray-200 py-4 z-[9999]">
-                    <div className="px-6 pb-3 border-b border-gray-100">
-                      <p className="text-sm font-semibold text-gray-700">
-                        Colonnes visibles
-                      </p>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
+                  <div className="absolute right-0 top-full mt-2 w-full min-w-[220px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-30">
+                    <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
                       {allColumns.map((col) => (
                         <label
                           key={col.key}
-                          className="flex items-center gap-4 px-6 py-3 hover:bg-gray-50 cursor-pointer"
+                          className="flex items-center px-5 py-3.5 hover:bg-blue-50/50 cursor-pointer transition-colors select-none group"
                         >
-                          <input
-                            type="checkbox"
-                            checked={visibleColumns.includes(col.key)}
-                            onChange={() => toggleColumn(col.key)}
-                            className="w-5 h-5 text-blue-900 rounded focus:ring-blue-900"
-                          />
-                          <span className="text-gray-700 font-medium">
+                          <div className="relative flex h-5 w-5 items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={visibleColumns.includes(col.key)}
+                              onChange={() => toggleColumn(col.key)}
+                              className="peer h-5 w-5 appearance-none rounded-md border-2 border-gray-300 bg-white checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors group-hover:border-blue-400"
+                            />
+                            <svg
+                              className="pointer-events-none absolute h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              strokeWidth="3"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          </div>
+                          <span className="ml-3 text-gray-700 font-medium group-hover:text-blue-700 transition-colors">
                             {col.label}
                           </span>
                         </label>
@@ -619,9 +748,7 @@ export default function GestionEtudiants() {
                 )}
 
                 <button
-                  onClick={() =>
-                    setCurrentPage(Math.min(totalPages, currentPage + 1))
-                  }
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
                   className="p-3 rounded-xl hover:bg-gray-100 disabled:opacity-50 transition"
                 >
@@ -647,6 +774,7 @@ export default function GestionEtudiants() {
                     />
                   </th>
                 )}
+
                 {visibleColumns.includes("nomComplet") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     <button
@@ -658,31 +786,37 @@ export default function GestionEtudiants() {
                     </button>
                   </th>
                 )}
+
                 {visibleColumns.includes("dateNaissance") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Date naissance
                   </th>
                 )}
+
                 {visibleColumns.includes("wilaya") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Wilaya
                   </th>
                 )}
+
                 {visibleColumns.includes("telephone") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Téléphone
                   </th>
                 )}
+
                 {visibleColumns.includes("email") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Email
                   </th>
                 )}
+
                 {visibleColumns.includes("formation") && (
                   <th className="px-6 py-5 text-left text-gray-700 font-medium">
                     Formation
                   </th>
                 )}
+
                 {editMode && (
                   <th className="px-6 py-5 text-right pr-10 text-gray-700 font-medium">
                     Actions
@@ -690,13 +824,11 @@ export default function GestionEtudiants() {
                 )}
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-100">
               {paginatedEtudiants.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={10}
-                    className="text-center py-16 text-gray-500 text-lg"
-                  >
+                  <td colSpan={10} className="text-center py-16 text-gray-500 text-lg">
                     Aucun étudiant trouvé avec les filtres actuels.
                   </td>
                 </tr>
@@ -704,10 +836,7 @@ export default function GestionEtudiants() {
                 paginatedEtudiants.map((e) => (
                   <tr key={e.id} className="hover:bg-gray-50 transition">
                     {editMode && (
-                      <td
-                        className="px-6 py-5"
-                        onClick={(ev) => ev.stopPropagation()}
-                      >
+                      <td className="px-6 py-5" onClick={(ev) => ev.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedIds.has(e.id)}
@@ -716,31 +845,33 @@ export default function GestionEtudiants() {
                         />
                       </td>
                     )}
+
                     {visibleColumns.includes("nomComplet") && (
                       <td className="px-6 py-5 font-medium text-gray-900">
                         {e.prenom} {e.nom}
                       </td>
                     )}
+
                     {visibleColumns.includes("dateNaissance") && (
                       <td className="px-6 py-5 text-gray-700">
                         {e.dateNaissance
-                          ? new Date(e.dateNaissance).toLocaleDateString(
-                              "fr-DZ"
-                            )
+                          ? new Date(e.dateNaissance).toLocaleDateString("fr-DZ")
                           : "-"}
                       </td>
                     )}
+
                     {visibleColumns.includes("wilaya") && (
                       <td className="px-6 py-5 text-gray-700">{e.wilaya}</td>
                     )}
+
                     {visibleColumns.includes("telephone") && (
-                      <td className="px-6 py-5 text-gray-700">
-                        {e.telephone || "-"}
-                      </td>
+                      <td className="px-6 py-5 text-gray-700">{e.telephone || "-"}</td>
                     )}
+
                     {visibleColumns.includes("email") && (
                       <td className="px-6 py-5 text-gray-700">{e.email}</td>
                     )}
+
                     {visibleColumns.includes("formation") && (
                       <td className="px-6 py-5">
                         <span className="inline-block px-4 py-2 bg-blue-100 text-blue-900 rounded-full text-sm font-medium">
@@ -748,6 +879,7 @@ export default function GestionEtudiants() {
                         </span>
                       </td>
                     )}
+
                     {editMode && (
                       <td
                         className="px-6 py-5 text-right pr-10"
@@ -769,7 +901,6 @@ export default function GestionEtudiants() {
           </table>
         </div>
 
-        {/* Add/Edit Modal */}
         {showModal && (
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
@@ -783,22 +914,18 @@ export default function GestionEtudiants() {
                 <h2 className="text-3xl font-bold text-blue-900">
                   {editingId ? "Modifier l'étudiant" : "Nouvel étudiant"}
                 </h2>
-                <button
-                  onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-600"
-                >
+                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
                   <X size={28} />
                 </button>
               </div>
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <input
                     type="text"
                     placeholder="Prénom *"
                     value={formData.prenom}
-                    onChange={(e) =>
-                      setFormData({ ...formData, prenom: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
                     required
                     className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                   />
@@ -806,9 +933,7 @@ export default function GestionEtudiants() {
                     type="text"
                     placeholder="Nom *"
                     value={formData.nom}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nom: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                     required
                     className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                   />
@@ -817,30 +942,54 @@ export default function GestionEtudiants() {
                 <input
                   type="date"
                   value={formData.dateNaissance}
-                  onChange={(e) =>
-                    setFormData({ ...formData, dateNaissance: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, dateNaissance: e.target.value })}
                   required
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <CustomSelect
-                    options={[
-                      { value: "", label: "Choisir une wilaya *" },
-                      ...modalWilayaOptions,
-                    ]}
-                    value={formData.wilaya}
-                    onChange={(v) => setFormData({ ...formData, wilaya: v })}
-                    placeholder="Choisir une wilaya *"
-                  />
+                  {/* Wilaya */}
+                  <div className="relative inline-block text-left w-full">
+                    <button
+                      type="button"
+                      onClick={() => setShowModalWilayaDropdown(!showModalWilayaDropdown)}
+                      className="w-full px-6 py-4 pr-12 text-left border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
+                    >
+                      <span className={formData.wilaya ? "text-gray-900" : "text-gray-500"}>
+                        {formData.wilaya || "Choisir une wilaya *"}
+                      </span>
+                      <ChevronDown
+                        className={`text-gray-500 transition-transform ${
+                          showModalWilayaDropdown ? "rotate-180" : ""
+                        }`}
+                        size={20}
+                      />
+                    </button>
+
+                    {showModalWilayaDropdown && (
+                      <div className="absolute left-0 right-0 top-full mt-2 z-40 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-h-64 overflow-y-auto">
+                        {wilayas.map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, wilaya: w });
+                              setShowModalWilayaDropdown(false);
+                            }}
+                            className="w-full text-left px-5 py-3 hover:bg-blue-50 transition"
+                          >
+                            {w}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <input
                     type="text"
                     placeholder="Commune"
                     value={formData.commune}
-                    onChange={(e) =>
-                      setFormData({ ...formData, commune: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
                     className="px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                   />
                 </div>
@@ -849,9 +998,7 @@ export default function GestionEtudiants() {
                   type="tel"
                   placeholder="Téléphone"
                   value={formData.telephone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, telephone: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                 />
 
@@ -859,22 +1006,58 @@ export default function GestionEtudiants() {
                   type="email"
                   placeholder="Email *"
                   value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none transition"
                 />
 
-                <CustomSelect
-                  options={[
-                    { value: "", label: "Choisir une formation *" },
-                    ...modalFormationOptions,
-                  ]}
-                  value={formData.formationId}
-                  onChange={(v) => setFormData({ ...formData, formationId: v })}
-                  placeholder="Choisir une formation *"
-                />
+                {/* Formation (ref + dropUp) */}
+                <div ref={formationDropdownRef} className="relative inline-block text-left w-full">
+                  <button
+                    type="button"
+                    onClick={toggleModalFormationDropdown}
+                    className="w-full px-6 py-4 pr-12 text-left border-2 border-gray-300 rounded-xl focus:border-yellow-500 focus:ring-4 focus:ring-yellow-200 outline-none bg-white transition flex items-center justify-between"
+                  >
+                    <span
+                      className={
+                        formData.formationId ? "text-gray-900" : "text-gray-500"
+                      }
+                    >
+                      {formData.formationId
+                        ? getFormationTitle(formData.formationId)
+                        : "Choisir une formation *"}
+                    </span>
+                    <ChevronDown
+                      className={`text-gray-500 transition-transform ${
+                        showModalFormationDropdown ? "rotate-180" : ""
+                      }`}
+                      size={20}
+                    />
+                  </button>
+
+                  {showModalFormationDropdown && (
+                    <div
+                      className={`absolute left-0 right-0 z-40 ${
+                        formationDropUp ? "bottom-full mb-2" : "top-full mt-2"
+                      } bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden max-h-64 overflow-y-auto`}
+                    >
+                      {formations.map((f) => (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, formationId: f.id });
+                            setShowModalFormationDropdown(false);
+                            setFormationDropUp(false);
+                          }}
+                          className="w-full text-left px-5 py-3 hover:bg-blue-50 transition"
+                        >
+                          {f.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex gap-6 pt-6">
                   <button
@@ -896,7 +1079,6 @@ export default function GestionEtudiants() {
           </div>
         )}
 
-        {/* Confirm Delete Popup */}
         {showConfirmDelete && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">

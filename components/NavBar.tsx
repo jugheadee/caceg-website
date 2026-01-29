@@ -16,10 +16,8 @@ interface Formation {
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-
   const [formations, setFormations] = useState<Formation[]>([]);
 
-  // Fetch dynamique + tri alphabétique
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "formations"), (snap) => {
       const data = snap.docs.map((doc) => ({
@@ -29,14 +27,27 @@ export default function Navbar() {
       }));
       setFormations(data.sort((a, b) => a.title.localeCompare(b.title)));
     });
+
     return () => unsub();
   }, []);
 
-  // Classe pour lien actif : trait jaune ultra fin + animation smooth
-  const activeLinkClass = "relative after:absolute after:bottom-[-4px] after:left-0 after:w-full after:h-1 after:bg-yellow-500 after:rounded-full after:transition-all after:duration-300 after:ease-in-out after:scale-x-100";
+  // Trait actif ultra-fin, moderne et élégant (2px, animation douce)
+  const getActiveClass = (path: string) =>
+    pathname === path || pathname.startsWith(path)
+      ? "after:scale-x-100"
+      : "after:scale-x-0 hover:after:scale-x-100";
 
-  // Classe pour lien inactif (trait caché)
-  const inactiveLinkClass = "after:scale-x-0";
+  const linkClass = (isActive: boolean) =>
+    `relative px-4 border-l border-gray-300 first:border-l-0 transition-colors hover:text-amber-600
+     after:absolute after:bottom-[-2px] after:left-0 after:w-full after:h-[2px] after:bg-yellow-500 after:rounded-full 
+     after:transition-transform after:duration-300 after:ease-out after:origin-left ${
+       isActive
+         ? "after:scale-x-100"
+         : "after:scale-x-0 hover:after:scale-x-100"
+     }`;
+
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href);
 
   return (
     <nav className="fixed top-0 w-full bg-white border-b border-gray-200 z-50">
@@ -44,7 +55,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center h-20 overflow-hidden">
           <Image
-            src="/CACEG-Consulting-1.jpg"
+            src="/favicon.jpg"
             alt="CACEG Logo"
             width={424}
             height={238}
@@ -55,17 +66,17 @@ export default function Navbar() {
 
         {/* Desktop Menu */}
         <ul className="hidden lg:flex items-center text-sm font-semibold uppercase text-gray-700 tracking-wider">
-          <li className={`px-4 border-l border-gray-300 first:border-l-0 ${pathname === "/home" || pathname === "/" ? activeLinkClass : inactiveLinkClass}`}>
-            <Link href="/home" className="hover:text-amber-600 transition">
-              Accueil
-            </Link>
+          <li className={linkClass(pathname === "/home" || pathname === "/")}>
+            <Link href="/home">Accueil</Link>
           </li>
 
-          {/* A PROPOS avec sous-menu déroulant */}
+          {/* A PROPOS avec sous-menu */}
           <li className="group relative px-4 border-l border-gray-300">
             <Link
               href="/a-propos"
-              className={`flex items-center gap-1 hover:text-amber-600 transition ${pathname.startsWith("/a-propos") ? activeLinkClass : inactiveLinkClass}`}
+              className={`flex items-center gap-1 ${getActiveClass(
+                "/a-propos"
+              )}`}
             >
               A propos ▼
             </Link>
@@ -82,14 +93,22 @@ export default function Navbar() {
               >
                 Un mot du directeur
               </Link>
+              <Link
+                href="/a-propos/nos-clients"
+                className="block px-6 py-3 text-gray-800 font-medium hover:bg-gray-100 hover:text-amber-600 transition"
+              >
+                Nos clients
+              </Link>
             </div>
           </li>
 
-          {/* Formations Dropdown DYNAMIQUE – max 4 */}
+          {/* Formations Dropdown */}
           <li className="group relative px-4 border-l border-gray-300">
             <Link
               href="/formations"
-              className={`flex items-center gap-1 hover:text-amber-600 transition ${pathname.startsWith("/formations") ? activeLinkClass : inactiveLinkClass}`}
+              className={`flex items-center gap-1 ${getActiveClass(
+                "/formations"
+              )}`}
             >
               Nos formations ▼
             </Link>
@@ -103,6 +122,7 @@ export default function Navbar() {
                   {formation.title.toUpperCase()}
                 </Link>
               ))}
+
               <Link
                 href="/formations"
                 className="block px-6 py-3 text-amber-600 font-bold hover:bg-gray-100 hover:text-amber-500 transition border-t border-gray-200 mt-2 pt-4"
@@ -112,121 +132,135 @@ export default function Navbar() {
             </div>
           </li>
 
-          <li className={`px-4 border-l border-gray-300 ${pathname === "/consulting" ? activeLinkClass : inactiveLinkClass}`}>
+          <li className={`${linkClass(pathname === "/consulting")}`}>
             <Link
               href="/consulting"
-              className="text-orange-600 hover:text-amber-600 font-bold transition"
+              className="text-orange-600 hover:text-amber-600  transition"
             >
               Consulting et accompagnement
             </Link>
           </li>
 
-          <li className={`px-4 border-l border-gray-300 ${pathname === "/contact" ? activeLinkClass : inactiveLinkClass}`}>
-            <Link href="/contact" className="hover:text-amber-600 transition">
-              Contact
-            </Link>
+          {/* Nouveau lien */}
+          <li
+            className={`${linkClass(
+              pathname === "/evenements" || pathname.startsWith("/evenements")
+            )}`}
+          >
+            <Link href="/evenements">Événements & Actualités</Link>
           </li>
 
-          {/* Icône recherche supprimée */}
+          <li className={`${linkClass(pathname === "/contact")}`}>
+            <Link href="/contact">Contact</Link>
+          </li>
         </ul>
 
         {/* Mobile Burger */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="lg:hidden text-2xl text-gray-700"
+          aria-label="Toggle menu"
         >
           {mobileMenuOpen ? "✕" : "☰"}
         </button>
       </div>
 
-      {/* Mobile Menu – inchangé */}
+      {/* Mobile Menu – structure mirrors desktop */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-gray-200">
+        <div className="lg:hidden bg-white border-top border-gray-200">
           <ul className="flex flex-col text-sm font-semibold uppercase text-gray-700 py-4">
+            {/* Accueil */}
             <li>
               <Link
                 href="/"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
+                className={`block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition ${
+                  pathname === "/" ? "text-amber-600" : ""
+                }`}
               >
                 Accueil
               </Link>
             </li>
-            <li>
+
+            {/* A Propos section */}
+            <li className="border-t border-gray-100 mt-2 pt-2">
               <Link
-                href="/presentation"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
+                href="/a-propos"
+                className={`block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition ${
+                  pathname.startsWith("/a-propos") ? "text-amber-600" : ""
+                }`}
               >
-                Présentation
+                A propos
+              </Link>
+              <div className="pl-10 text-gray-600 font-normal">
+                <Link
+                  href="/a-propos/presentation"
+                  className="block px-6 py-2 hover:bg-gray-50 hover:text-amber-600 transition text-sm"
+                >
+                  Présentation
+                </Link>
+                <Link
+                  href="/a-propos/mot-du-directeur"
+                  className="block px-6 py-2 hover:bg-gray-50 hover:text-amber-600 transition text-sm"
+                >
+                  Un mot du directeur
+                </Link>
+                <Link
+                  href="/a-propos/nos-partenaires"
+                  className="block px-6 py-2 hover:bg-gray-50 hover:text-amber-600 transition text-sm"
+                >
+                  Nos partenaires
+                </Link>
+              </div>
+            </li>
+
+            {/* Formations section */}
+            <li className="border-t border-gray-100 mt-2 pt-2">
+              <Link
+                href="/formations"
+                className={`block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition ${
+                  pathname.startsWith("/formations") ? "text-amber-600" : ""
+                }`}
+              >
+                Nos formations
+              </Link>
+              <div className="pl-10 text-gray-600 font-normal max-h-64 overflow-y-auto">
+                {formations.slice(0, 8).map((formation) => (
+                  <Link
+                    key={formation.id}
+                    href={`/formations/${formation.slug}`}
+                    className="block px-6 py-2 hover:bg-gray-50 hover:text-amber-600 transition text-sm"
+                  >
+                    {formation.title}
+                  </Link>
+                ))}
+                <Link
+                  href="/formations"
+                  className="block px-6 py-3 mt-2 text-amber-600 hover:text-amber-500 transition text-sm font-bold border-t border-gray-200"
+                >
+                  Voir toutes les formations...
+                </Link>
+              </div>
+            </li>
+
+            {/* Consulting */}
+            <li className="border-t border-gray-100 mt-2 pt-2">
+              <Link
+                href="/consulting"
+                className={`block px-6 py-3 hover:bg-gray-100 text-orange-600 font-bold hover:text-amber-600 transition ${
+                  isActive("/consulting") ? "text-amber-600" : ""
+                }`}
+              >
+                Consulting et accompagnement
               </Link>
             </li>
-            <li>
-              <Link
-                href="/equipe"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
-              >
-                Équipe
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/actualites"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
-              >
-                Actualités
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/formations/management"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
-              >
-                Management de l'entreprise
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/formations/gestion-recources-humaines"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
-              >
-                Gestion des ressources humaines
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/formations/comptabilite-finance-fiscalite"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
-              >
-                Comptabilité, finance et fiscalité
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/formations/gestion-commerciale-marketing"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
-              >
-                Gestion commerciale et marketing
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/formations/informatique"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
-              >
-                Informatique
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/etudes"
-                className="block px-6 py-3 hover:bg-gray-100 text-orange-600 font-bold hover:text-amber-600 transition"
-              >
-                Études et accompagnement
-              </Link>
-            </li>
-            <li>
+
+            {/* Contact */}
+            <li className="border-t border-gray-100 mt-2 pt-2">
               <Link
                 href="/contact"
-                className="block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition"
+                className={`block px-6 py-3 hover:bg-gray-100 hover:text-amber-600 transition ${
+                  isActive("/contact") ? "text-amber-600" : ""
+                }`}
               >
                 Contact
               </Link>
