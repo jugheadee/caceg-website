@@ -7,11 +7,12 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  doc,
   type Timestamp,
+  doc,
 } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+
 import {
   Edit,
   Download,
@@ -28,6 +29,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 
+
 interface Formation {
   id: string;
   title: string;
@@ -36,12 +38,13 @@ interface Formation {
   description: string;
   price: string;
   image: string;
+  imagePath?: string;
   duration?: string;
   coursesCount?: string;
   objectives?: string;
   prerequisites?: string;
   targetAudience?: string;
-  dateCreation: any;
+ dateCreation: Timestamp | string | Date | null;
   featured?: boolean;
 }
 
@@ -135,23 +138,28 @@ const generateSlug = (title: string): string => {
     .replace(/^-+|-+$/g, "");
 };
 
-const formatDateFrDZ = (value: Formation["dateCreation"]) => {
-  if (!value) return "";
+type DateCreation = Formation["dateCreation"];
 
-  // Firestore Timestamp
-  if (typeof value === "object" && "toDate" in value && typeof value.toDate === "function") {
-    return value.toDate().toLocaleDateString("fr-DZ");
-  }
+function isTimestamp(v: unknown): v is Timestamp {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "toDate" in v &&
+    typeof (v as { toDate: unknown }).toDate === "function"
+  );
+}
 
-  // Date object
-  if (value instanceof Date) {
-    return value.toLocaleDateString("fr-DZ");
-  }
+function toDateSafe(value: DateCreation): Date | null {
+  if (!value) return null;
+  if (isTimestamp(value)) return value.toDate();
+  if (value instanceof Date) return value;
+  const d = new Date(value); // value est string ici
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
-  // string (ISO or other)
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("fr-DZ");
+const formatDateFrDZ = (value: DateCreation) => {
+  const d = toDateSafe(value);
+  return d ? d.toLocaleDateString("fr-DZ") : "";
 };
 
 export default function GestionFormations() {
@@ -191,6 +199,7 @@ export default function GestionFormations() {
     description: "",
     price: "",
     image: "",
+    imagePath: "",
     duration: "",
     coursesCount: "",
     objectives: "",
@@ -260,32 +269,15 @@ export default function GestionFormations() {
     }
 
     filtered = [...filtered].sort((a, b) => {
-      const aTime = (() => {
-        const v = a.dateCreation;
-        if (!v) return 0;
-        if (typeof v === "object" && "toDate" in v && typeof v.toDate === "function")
-          return v.toDate().getTime();
-        if (v instanceof Date) return v.getTime();
-        const d = new Date(v);
-        return Number.isNaN(d.getTime()) ? 0 : d.getTime();
-      })();
+  const aTime = toDateSafe(a.dateCreation)?.getTime() ?? 0;
+  const bTime = toDateSafe(b.dateCreation)?.getTime() ?? 0;
 
-      const bTime = (() => {
-        const v = b.dateCreation;
-        if (!v) return 0;
-        if (typeof v === "object" && "toDate" in v && typeof v.toDate === "function")
-          return v.toDate().getTime();
-        if (v instanceof Date) return v.getTime();
-        const d = new Date(v);
-        return Number.isNaN(d.getTime()) ? 0 : d.getTime();
-      })();
-
-      if (sortBy === "dateDesc") return bTime - aTime;
-      if (sortBy === "dateAsc") return aTime - bTime;
-      if (sortBy === "titleAsc") return a.title.localeCompare(b.title);
-      if (sortBy === "titleDesc") return b.title.localeCompare(a.title);
-      return 0;
-    });
+  if (sortBy === "dateDesc") return bTime - aTime;
+  if (sortBy === "dateAsc") return aTime - bTime;
+  if (sortBy === "titleAsc") return a.title.localeCompare(b.title);
+  if (sortBy === "titleDesc") return b.title.localeCompare(a.title);
+  return 0;
+});
 
     setFormations(filtered);
     setCurrentPage(1);
@@ -373,6 +365,7 @@ export default function GestionFormations() {
     setFilterFree(false);
     setShowPriceDropdown(false);
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -447,6 +440,7 @@ export default function GestionFormations() {
       description: formation.description,
       price: formation.price,
       image: formation.image || "",
+      imagePath: formation.imagePath || "",
       duration: formation.duration || "",
       coursesCount: formation.coursesCount || "",
       objectives: formation.objectives || "",
@@ -509,6 +503,7 @@ export default function GestionFormations() {
       description: "",
       price: "",
       image: "",
+      imagePath: "",
       duration: "",
       coursesCount: "",
       objectives: "",

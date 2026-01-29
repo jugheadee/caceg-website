@@ -19,7 +19,7 @@ import { db } from "@/lib/firebase";
 
 const slides = [
   {
-    image: "/hero1.jpeg",
+    image: "/hero-test.jpg",
     title: "PARTENAIRE PRIVILÉGIÉ DES PME",
     subtitle:
       "Des solutions sur mesure de formation, conseil et expertise de votre projet jusqu'à la concrétisation",
@@ -286,9 +286,7 @@ export default function Home() {
               CACEG Conseil et Etude
             </h2>
             <p className="text-gray-700 mb-8 text-lg">
-              Nous avons pour mission d'accompagner les entreprises dans leurs
-              projets d'évolution et de développement afin de les propulser vers
-              la réussite de leurs objectifs de performance.
+              {"Nous avons pour mission d'accompagner les entreprises dans leurs projets d'évolution et de développement afin de les propulser vers la réussite de leurs objectifs de performance."}
             </p>
             <Link
               href="/consulting"
