@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: "CACEG Consulting",
   description: "Centre de formation et conseil – CACEG",
   icons: {
-    icon: "/favicon.ico?v=2", 
+    icon: "/favicon.ico?v=2",
   },
 };
 
@@ -26,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
       </body>
