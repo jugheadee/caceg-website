@@ -55,7 +55,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center h-20 overflow-hidden">
           <Image
-            src="/favicon.jpg"
+            src="/logo.jpg"
             alt="CACEG Logo"
             width={424}
             height={238}
